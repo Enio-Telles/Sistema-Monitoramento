@@ -29,7 +29,7 @@ except ImportError as exc:  # pragma: no cover
         "Pacotes necessários ('pyarrow', 'pandas') não estão instalados. Instale as dependências."
     ) from exc
 
-from tabelas_auditorias.processing import materializar_tabelas_consolidacao
+from tabelas_auditorias.produtos.processing import materializar_tabelas_consolidacao
 from tabelas_auditorias.utils import normalize_df_types
 
 

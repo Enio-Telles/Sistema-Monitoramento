@@ -19,7 +19,7 @@ import pandas as pd
 from indice_produtos import criar_indice_produtos
 
 # Carregue o DataFrame base de produtos (por exemplo, utilizando
-# tabelas_auditorias.processing.build_produtos_base)
+# tabelas_auditorias.produtos.processing.build_produtos_base)
 produtos_base = carregar_produtos(...)
 
 # Crie o índice de produtos
@@ -51,7 +51,7 @@ posteriormente, correlacionar com o ``codigo_padrao``.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Optional
+from typing import Iterable, List, Optional
 
 import pandas as pd
 
