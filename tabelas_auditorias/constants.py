@@ -41,6 +41,7 @@ FINAL_SCHEMA = {
     "descrição_normalizada": "string",
     "descricao": "string",
     "codigo_padrao": "string",
+    "lista_chaves_produto": "object",
     "lista_codigos": "object",
     "lista_tipo_item": "object",
     "lista_ncm": "object",
@@ -61,6 +62,7 @@ FINAL_SCHEMA = {
 
 CODIGOS_DESAG_SCHEMA = {
     "codigo_desagregado": "string",
+    "lista_chaves_produto": "object",
     "descricao": "string",
     "lista_tipo_item": "object",
     "lista_ncm": "object",

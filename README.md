@@ -58,6 +58,7 @@ Sistema-Monitoramento/
     │       ├── nfe_<cnpj>.parquet
     │       ├── nfce_<cnpj>.parquet
     │       └── produtos/          # NOVO: Subpasta consolidada
+    │           ├── indice_produtos_<cnpj>.parquet
     │           ├── tabela_descricoes_unificadas_<cnpj>.parquet
     │           ├── codigos_desagregados_<cnpj>.parquet
     │           ├── tabela_produtos_<cnpj>.parquet
@@ -100,12 +101,26 @@ O sistema agora gera automaticamente uma tabela de mapeamento (`mapeamento_codig
 
 Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo sistema.
 
-### 5.1 Tabela de Produtos (`tabela_produtos_<cnpj>.parquet`)
+### 5.1 Índice de Produtos (`indice_produtos_<cnpj>.parquet`)
+*Tabela que consolida todos os itens originais distintos gerando um identificador único.*
+
+- **`chave_produto`**: Identificador sequencial único gerado para cada combinação distinta de atributos do produto.
+- **`codigo`**: Código original do produto.
+- **`descricao`**: Descrição principal.
+- **`descr_compl`**: Descrição complementar.
+- **`tipo_item`**: Tipo do item.
+- **`ncm`**: Código NCM.
+- **`cest`**: Código CEST.
+- **`gtin`**: Código GTIN.
+- **`lista_unidades`**: Lista de unidades distintas encontradas para esta combinação.
+
+### 5.2 Tabela de Produtos (`tabela_produtos_<cnpj>.parquet`)
 *Tabela consolidada que agrupa descrições similares.*
 
 - **`descrição_normalizada`**: Descrição do produto após limpeza (sem acentos, em maiúsculas, sem caracteres especiais e sem *stopwords*). É a chave de agrupamento.
 - **`descricao`**: Descrição original escolhida como representante principal do grupo.
 - **`codigo_padrao`**: Código de produto escolhido como representante do grupo (baseado na maior frequência; em caso de empate, o menor valor alfanumérico).
+- **`lista_chaves_produto`**: Lista de chaves de produto (provenientes do índice de produtos) que foram agrupadas sob este registro, garantindo total rastreabilidade até o item original.
 - **`qtd_codigos`**: Quantidade de códigos originais distintos que foram agrupados nesta linha.
 - **`lista_codigos`**: Lista formatada dos códigos originais do grupo e suas respectivas frequências `[codigo; frequencia]`.
 - **`lista_tipo_item` / `lista_ncm` / `lista_cest` / `lista_gtin` / `lista_unid`**: Listas contendo todos os valores distintos encontrados no grupo para cada atributo.
@@ -118,16 +133,18 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 - **`conflito_co_sefin`**: Flag booleana que indica se o grupo possui múltiplos códigos SEFIN inferidos diferentes entre seus membros.
 - **`verificado`**: Campo booleano (`true`/`false`) para controle de revisão manual pelo auditor.
 
-### 5.2 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
+### 5.3 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
 *Tabela que contém as novas entradas para códigos que foram "separados" por possuírem descrições muito diferentes.*
 
 - **`codigo_desagregado`**: O novo código gerado (ex: `codigo_separado_01`).
 - **`descricao`**: Descrição representante deste novo subgrupo.
+- **`lista_chaves_produto`**: Lista de chaves de produto que foram segregadas e compõem este novo código.
 - **`lista_tipo_item` / `lista_ncm` / `lista_cest` / ...**: Atributos específicos deste código segregado.
 
-### 5.3 Tabela de Mapeamento (`mapeamento_codigos_{cnpj}.parquet`)
+### 5.4 Tabela de Mapeamento (`mapeamento_codigos_{cnpj}.parquet`)
 *Resumo rápido do fluxo de transformação dos códigos.*
 
+- **`chave_produto`**: A chave do item conforme constava no índice de produtos original, indicando o item individual exato (mesmo que códigos se repitam).
 - **`codigo_original`**: Código conforme constava no banco de dados Oracle.
 - **`codigo_final`**: O código para o qual ele foi mapeado (pode ser o código padrão do grupo ou um código segregado).
 - **`descricao_final`**: Descrição que representa o código final.
