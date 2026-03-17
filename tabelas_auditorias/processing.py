@@ -16,11 +16,28 @@ from .utils import (
     COSEFINClassifier
 )
 
-def canonicalize_nfe_like(df: pd.DataFrame, fonte: str) -> pd.DataFrame:
+def canonicalize_nfe_like(df: pd.DataFrame, fonte: str, valid_cfops: set[str]) -> pd.DataFrame:
     data_mov = pd.to_datetime(
         coalesce_columns_ci(df, ["dhemi", "dh_emi", "dh_emi_utc", "emi_dh", "data_emissao"]),
         errors="coerce",
     )
+
+    cfop = coalesce_columns_ci(df, ["co_cfop", "cfop"]).astype("string").str.strip()
+    tipo_operacao = coalesce_columns_ci(df, ["tipo_operacao"]).astype("string").str.strip()
+
+    vprod = coalesce_columns_ci(df, ["prod_vprod"]).astype(float).fillna(0)
+    vfrete = coalesce_columns_ci(df, ["prod_vfrete"]).astype(float).fillna(0)
+    vseg = coalesce_columns_ci(df, ["prod_vseg"]).astype(float).fillna(0)
+    voutro = coalesce_columns_ci(df, ["prod_voutro"]).astype(float).fillna(0)
+    vdesc = coalesce_columns_ci(df, ["prod_vdesc"]).astype(float).fillna(0)
+
+    valor_item = vprod + vfrete + vseg + voutro - vdesc
+
+    # 1 - SAIDA
+    is_saida = (tipo_operacao == '1 - SAIDA') & cfop.isin(valid_cfops)
+
+    valor_saida = pd.Series(0.0, index=df.index)
+    valor_saida.loc[is_saida] = valor_item.loc[is_saida]
 
     return pd.DataFrame(
         {
@@ -34,12 +51,25 @@ def canonicalize_nfe_like(df: pd.DataFrame, fonte: str) -> pd.DataFrame:
             "gtin": coalesce_columns_ci(df, ["prod_cean", "prod_ceantrib", "prod_cbarra", "prod_ean", "prod_eantrib"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["prod_ucom", "prod_utrib", "unid"]).astype("string"),
             "data_mov": data_mov,
+            "valor_entrada": pd.Series(0.0, index=df.index),
+            "valor_saida": valor_saida,
         }
     )
 
 
-def canonicalize_c170(df: pd.DataFrame) -> pd.DataFrame:
+def canonicalize_c170(df: pd.DataFrame, valid_cfops: set[str]) -> pd.DataFrame:
     data_mov = pd.to_datetime(coalesce_columns_ci(df, ["dt_doc"]), errors="coerce")
+
+    cfop = coalesce_columns_ci(df, ["co_cfop", "cfop"]).astype("string").str.strip()
+    ind_oper = coalesce_columns_ci(df, ["ind_oper"]).astype("string").str.strip()
+    valor_item = coalesce_columns_ci(df, ["valor_item", "vl_item"]).astype(float).fillna(0)
+
+    # 0 - ENTRADA, 1 - SAIDA. Operacoes de saida = 1. Therefore entrada is != '1' (which is '0')
+    is_entrada = (ind_oper != '1') & cfop.isin(valid_cfops)
+
+    valor_entrada = pd.Series(0.0, index=df.index)
+    valor_entrada.loc[is_entrada] = valor_item.loc[is_entrada]
+
     return pd.DataFrame(
         {
             "fonte": "c170",
@@ -52,11 +82,13 @@ def canonicalize_c170(df: pd.DataFrame) -> pd.DataFrame:
             "gtin": coalesce_columns_ci(df, ["cod_barra"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["unid"]).astype("string"),
             "data_mov": data_mov,
+            "valor_entrada": valor_entrada,
+            "valor_saida": pd.Series(0.0, index=df.index),
         }
     )
 
 
-def canonicalize_bloco_h(df: pd.DataFrame) -> pd.DataFrame:
+def canonicalize_bloco_h(df: pd.DataFrame, valid_cfops: set[str]) -> pd.DataFrame:
     data_mov = pd.to_datetime(coalesce_columns_ci(df, ["dt_inv"]), errors="coerce")
     return pd.DataFrame(
         {
@@ -70,6 +102,8 @@ def canonicalize_bloco_h(df: pd.DataFrame) -> pd.DataFrame:
             "gtin": coalesce_columns_ci(df, ["cod_barra"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["unidade_medida"]).astype("string"),
             "data_mov": data_mov,
+            "valor_entrada": pd.Series(0.0, index=df.index),
+            "valor_saida": pd.Series(0.0, index=df.index),
         }
     )
 
@@ -137,22 +171,29 @@ def alinhar_nomenclatura_documento(df: pd.DataFrame) -> pd.DataFrame:
 def build_produtos_base(pasta_cnpj: Path, cnpj: str) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
 
+    valid_cfops = set()
+    ref_cfop_path = Path(__file__).resolve().parent.parent / "referencias" / "CFOP" / "cfop_bi.parquet"
+    if ref_cfop_path.exists():
+        cfop_df = pd.read_parquet(ref_cfop_path)
+        if "OPERACAO_MERCANTIL" in cfop_df.columns and "co_cfop" in cfop_df.columns:
+            valid_cfops = set(cfop_df.loc[cfop_df["OPERACAO_MERCANTIL"] == "X", "co_cfop"].astype("string").str.strip())
+
     nfe = load_parquet_if_exists(pasta_cnpj / f"nfe_{cnpj}.parquet")
     nfce = load_parquet_if_exists(pasta_cnpj / f"nfce_{cnpj}.parquet")
     c170 = load_parquet_if_exists(pasta_cnpj / f"c170_simplificada_{cnpj}.parquet")
     bloco_h = load_parquet_if_exists(pasta_cnpj / f"bloco_h_{cnpj}.parquet")
 
     if nfe is not None:
-        frames.append(canonicalize_nfe_like(nfe, "nfe"))
+        frames.append(canonicalize_nfe_like(nfe, "nfe", valid_cfops))
     if nfce is not None:
-        frames.append(canonicalize_nfe_like(nfce, "nfce"))
+        frames.append(canonicalize_nfe_like(nfce, "nfce", valid_cfops))
     if c170 is not None:
-        frames.append(canonicalize_c170(c170))
+        frames.append(canonicalize_c170(c170, valid_cfops))
     if bloco_h is not None:
-        frames.append(canonicalize_bloco_h(bloco_h))
+        frames.append(canonicalize_bloco_h(bloco_h, valid_cfops))
 
     if not frames:
-        return pd.DataFrame(columns=["fonte", "codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid", "data_mov"])
+        return pd.DataFrame(columns=["fonte", "codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid", "data_mov", "valor_entrada", "valor_saida"])
 
     produtos = pd.concat(frames, ignore_index=True)
     for col in ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid"]:
@@ -260,6 +301,8 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             lista_co_sefin=("co_sefin_inferido", unique_sorted),
             qtd_codigos=("codigo_lista_fmt", "nunique"),
             descricao_padrao=("descricao_padrao", "first"),
+            valor_total_entradas=("valor_entrada", "sum"),
+            valor_total_saidas=("valor_saida", "sum"),
         )
         .reset_index()
     )
@@ -297,6 +340,8 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             "lista_descricoes",
             "lista_descricoes_normalizadas",
             "descricao_padrao",
+            "valor_total_entradas",
+            "valor_total_saidas",
         ]
     ].sort_values(["descricao_normalizada", "descricao"], kind="stable")
     tabela_descricoes_unificadas["verificado"] = False

@@ -57,6 +57,8 @@ FINAL_SCHEMA = {
     "qtd_codigos": "int64",
     "descricao_padrao": "string",
     "verificado": "boolean",
+    "valor_total_entradas": "float64",
+    "valor_total_saidas": "float64",
 }
 
 CODIGOS_DESAG_SCHEMA = {
