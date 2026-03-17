@@ -506,11 +506,6 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     tabela_final["lista_codigos"] = tabela_final["descricao_normalizada"].map(montar_lista_codigos_desag)
     tabela_final = tabela_final.sort_values(["descricao_normalizada", "descricao"], kind="stable")
 
-    # Adiciona as colunas de somas anuais pivotadas também na tabela final
-    if not tabela_somas_pivot.empty:
-        tabela_final = tabela_final.merge(tabela_somas_pivot, on="descricao_normalizada", how="left")
-        vlr_cols_final = [c for c in tabela_final.columns if c.startswith(("Valores_", "Estoque_"))]
-        tabela_final[vlr_cols_final] = tabela_final[vlr_cols_final].fillna(0)
 
     tabela_final = alinhar_nomenclatura_documento(tabela_final)
 
