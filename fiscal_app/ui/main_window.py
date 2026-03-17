@@ -2,23 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+
 
 import polars as pl
 from PySide6.QtCore import QDate, QThread, Qt, Signal, QUrl
-from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QApplication,
     QDateEdit,
     QFileDialog,
-    QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
-    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -28,7 +25,6 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QTableView,
-    QTextEdit,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -43,7 +39,7 @@ from fiscal_app.services.parquet_service import FilterCondition, ParquetService
 from fiscal_app.services.pipeline_service import PipelineResult, PipelineService
 from fiscal_app.services.registry_service import RegistryService
 from fiscal_app.ui.dialogs import ColumnSelectorDialog
-from fiscal_app.utils.text import display_cell, normalize_text, remove_accents
+from fiscal_app.utils.text import remove_accents
 
 
 class PipelineWorker(QThread):
