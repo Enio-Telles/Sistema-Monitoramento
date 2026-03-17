@@ -7,7 +7,6 @@ from typing import Any
 
 import polars as pl
 from docx import Document
-from docx.shared import Inches
 from openpyxl import Workbook
 
 from fiscal_app.config import MAX_DOCX_ROWS
