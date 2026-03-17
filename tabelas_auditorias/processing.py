@@ -198,9 +198,12 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     )
 
     produtos = produtos.merge(codigo_stats, on="codigo", how="left")
-    produtos["codigo_lista_fmt"] = produtos.apply(
-        lambda row: format_codigo_lista(str(row["codigo"]), int(row["qtd_descricoes_diferentes"])),
-        axis=1,
+    produtos["codigo_lista_fmt"] = (
+        "["
+        + produtos["codigo"].astype(str)
+        + "; "
+        + produtos["qtd_descricoes_diferentes"].fillna(0).astype(int).astype(str)
+        + "]"
     )
 
     candidatos = (
@@ -291,8 +294,10 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     if not mapa_desag.empty:
         mapa_desag = mapa_desag.sort_values(["codigo", "descricao_normalizada"], kind="stable")
         mapa_desag["seq_desag"] = mapa_desag.groupby("codigo").cumcount() + 1
-        mapa_desag["codigo_desagregado"] = mapa_desag.apply(
-            lambda row: f"{row['codigo']}_separado_{int(row['seq_desag']):02d}", axis=1
+        mapa_desag["codigo_desagregado"] = (
+            mapa_desag["codigo"].astype(str)
+            + "_separado_"
+            + mapa_desag["seq_desag"].astype(int).astype(str).str.zfill(2)
         )
     else:
         mapa_desag = pd.DataFrame(columns=["codigo", "descricao_normalizada", "seq_desag", "codigo_desagregado"])
