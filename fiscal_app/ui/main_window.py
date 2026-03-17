@@ -6,19 +6,16 @@ from typing import Callable
 
 import polars as pl
 from PySide6.QtCore import QDate, QThread, Qt, Signal, QUrl
-from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QApplication,
     QDateEdit,
     QFileDialog,
-    QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
-    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -28,7 +25,6 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QTableView,
-    QTextEdit,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
