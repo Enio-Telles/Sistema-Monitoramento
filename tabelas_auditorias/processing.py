@@ -12,7 +12,8 @@ from .utils import (
     cest_valido,
     codigo_num_sort,
     unique_sorted,
-    empty_with_schema
+    empty_with_schema,
+    COSEFINClassifier
 )
 
 def canonicalize_nfe_like(df: pd.DataFrame, fonte: str) -> pd.DataFrame:
@@ -189,6 +190,11 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         + produtos["cest_limpo"].notna().astype(int)
     )
 
+    # Inferência do CO_SEFIN
+    ref_dir = Path(__file__).resolve().parent.parent / "referencias" / "CO_SEFIN"
+    classifier = COSEFINClassifier(ref_dir)
+    produtos["co_sefin_inferido"] = classifier.classify(produtos)
+
     produtos = produtos[produtos["descricao_normalizada"].notna()].copy()
 
     codigo_stats = (
@@ -249,11 +255,18 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             lista_fontes=("fonte", unique_sorted),
             lista_descricoes=("lista_descricoes", lambda x: sorted(set(y for l in x for y in l))),
             lista_descricoes_normalizadas=("descricao_normalizada", lambda x: sorted(set(x))),
+            lista_co_sefin=("co_sefin_inferido", unique_sorted),
             qtd_codigos=("codigo_lista_fmt", "nunique"),
             descricao_padrao=("descricao_padrao", "first"),
         )
         .reset_index()
     )
+
+    # Identificação de conflitos de CO_SEFIN
+    tabela_descricoes_unificadas["conflito_co_sefin"] = tabela_descricoes_unificadas["lista_co_sefin"].apply(lambda l: len(l) > 1)
+    # Define o co_sefin_padrao como o mais frequente no grupo ou o primeiro da lista
+    co_sefin_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "co_sefin_inferido", "co_sefin_padrao")
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(co_sefin_padrao, on="descricao_normalizada", how="left")
 
     tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(descricao_representativa, on="descricao_normalizada", how="left")
     tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(codigo_padrao, on="descricao_normalizada", how="left")
@@ -276,6 +289,8 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             "ncm_padrao",
             "cest_padrao",
             "gtin_padrao",
+            "co_sefin_padrao",
+            "conflito_co_sefin",
             "lista_fontes",
             "lista_descricoes",
             "lista_descricoes_normalizadas",
@@ -315,6 +330,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
                 lista_gtin=("gtin_limpo", unique_sorted),
                 lista_unid=("unid_padronizada", unique_sorted),
                 lista_descricoes_normalizadas=("descricao_normalizada", lambda x: sorted(set(x))),
+                co_sefin_inferido=("co_sefin_inferido", unique_sorted),
                 qtd_codigos=("codigo_desagregado", "nunique"),
                 descricao_padrao=("descricao", "first"),
             )
@@ -330,6 +346,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
                 "lista_cest",
                 "lista_gtin",
                 "lista_unid",
+                "co_sefin_inferido",
                 "descricao_padrao",
             ]
         ].sort_values(["codigo_desagregado"], kind="stable")
@@ -349,7 +366,15 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             saida.append(format_codigo_lista(codigo_final, qtd))
         return unique_sorted(saida)
 
-    tabela_final = tabela_descricoes_unificadas.rename(columns={"descrição_normalizada": "descricao_normalizada", "NCM_padrao": "ncm_padrao", "CEST_padrao": "cest_padrao", "GTIN_padrao": "gtin_padrao"}).copy()
+    tabela_final = tabela_descricoes_unificadas.rename(
+        columns={
+            "descrição_normalizada": "descricao_normalizada",
+            "NCM_padrao": "ncm_padrao",
+            "CEST_padrao": "cest_padrao",
+            "GTIN_padrao": "gtin_padrao",
+            "co_sefin_padrao": "co_sefin_inferido"
+        }
+    ).copy()
     tabela_final["codigo_padrao"] = tabela_final.apply(
         lambda row: replacement_map.get((str(row["codigo_padrao"]), str(row["descricao_normalizada"])), row["codigo_padrao"]),
         axis=1,

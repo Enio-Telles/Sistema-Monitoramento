@@ -136,3 +136,70 @@ def empty_with_schema(schema: dict[str, str]) -> pd.DataFrame:
         else:
             data[col] = pd.Series([], dtype=dtype)
     return pd.DataFrame(data)
+
+
+class COSEFINClassifier:
+    """Classificador de mercadorias para inferir o código CO_SEFIN."""
+
+    def __init__(self, ref_dir: Path):
+        self.ref_dir = ref_dir
+        self.df_cest_ncm = load_parquet_if_exists(ref_dir / "sitafe_cest_ncm.parquet")
+        self.df_cest = load_parquet_if_exists(ref_dir / "sitafe_cest.parquet")
+        self.df_ncm = load_parquet_if_exists(ref_dir / "sitafe_ncm.parquet")
+
+        # Normalização preventiva das bases de referência
+        if self.df_cest_ncm is not None:
+            self.df_cest_ncm["it_nu_cest"] = self.df_cest_ncm["it_nu_cest"].astype("string").str.strip()
+            self.df_cest_ncm["it_nu_ncm"] = self.df_cest_ncm["it_nu_ncm"].astype("string").str.strip()
+            self.df_cest_ncm["it_co_sefin"] = self.df_cest_ncm["it_co_sefin"].astype("string").str.strip()
+            # F1: it_nu_cest, it_nu_ncm -> it_co_sefin
+
+        if self.df_cest is not None:
+            self.df_cest["cest"] = self.df_cest["cest"].astype("string").str.strip()
+            self.df_cest["co-sefin"] = self.df_cest["co-sefin"].astype("string").str.strip()
+            # F2: cest -> co-sefin
+
+        if self.df_ncm is not None:
+            self.df_ncm["ncm"] = self.df_ncm["ncm"].astype("string").str.strip()
+            self.df_ncm["co-sefin"] = self.df_ncm["co-sefin"].astype("string").str.strip()
+            # F3: ncm -> co-sefin
+
+    def classify(self, df: pd.DataFrame) -> pd.Series:
+        """Inferência hierárquica do co_sefin_inferido baseada em NCM e CEST."""
+        res = pd.Series([None] * len(df), index=df.index, dtype="string")
+
+        # Normalização das colunas de entrada para o merge
+        work = pd.DataFrame({
+            "ncm": df["ncm_limpo"].astype("string").str.strip(),
+            "cest": df["cest_limpo"].astype("string").str.strip()
+        }, index=df.index)
+
+        # Tier 1: CEST + NCM
+        if self.df_cest_ncm is not None:
+            m1 = work.merge(
+                self.df_cest_ncm[["it_nu_cest", "it_nu_ncm", "it_co_sefin"]],
+                left_on=["cest", "ncm"],
+                right_on=["it_nu_cest", "it_nu_ncm"],
+                how="left"
+            )
+            res = res.fillna(m1["it_co_sefin"].set_axis(df.index))
+
+        # Tier 2: CEST
+        if self.df_cest is not None:
+            m2 = work.merge(
+                self.df_cest[["cest", "co-sefin"]],
+                on="cest",
+                how="left"
+            )
+            res = res.fillna(m2["co-sefin"].set_axis(df.index))
+
+        # Tier 3: NCM
+        if self.df_ncm is not None:
+            m3 = work.merge(
+                self.df_ncm[["ncm", "co-sefin"]],
+                on="ncm",
+                how="left"
+            )
+            res = res.fillna(m3["co-sefin"].set_axis(df.index))
+
+        return res
