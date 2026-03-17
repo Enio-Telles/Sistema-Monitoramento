@@ -8,72 +8,56 @@ A aplicação foi separada em quatro camadas:
 
 - **UI (`fiscal_app/ui`)**: janelas, widgets, navegação e mensagens amigáveis.
 - **Regras de negócio (`fiscal_app/services`)**: filtros, agregação, exportação, cadastro de CNPJs e integração com o pipeline Oracle.
+- **Mapeamento e Consolidação (`tabelas_auditorias`)**: lógica modularizada para normalização, segregação e agrupamento de códigos de produtos.
 - **Acesso a dados (`fiscal_app/services/parquet_service.py`)**: leitura lazy com Polars, paginação, seleção de colunas e persistência em Parquet.
 - **Modelo de visualização (`fiscal_app/models`)**: adaptação de DataFrame Polars para `QTableView`.
 
 ### Decisões de implementação
 
+- **Python 3.12+**: Requisito base para o ambiente `monit`.
 - **Polars** é a biblioteca principal para leitura, filtro, paginação e gravação de Parquet.
+- **Mapeamento de Códigos**: Geração automática de `mapeamento_codigos_{cnpj}.parquet` para auditoria de agrupamentos e segregações.
 - **PySide6** fornece a interface desktop.
 - **openpyxl** gera planilhas Excel.
 - **python-docx** gera relatórios padronizados em Word.
 - **HTML estruturado** é gerado como string e salvo em `.txt` para rastreabilidade.
-- O pipeline Oracle já existente foi mantido e passou a ser chamado pela interface por CNPJ para gerar a tabela `tabela_produtos`.
-- A tabela original `tabela_produtos_<cnpj>.parquet` é preservada; toda edição vai para `tabela_produtos_editavel_<cnpj>.parquet`.
-- Novas colunas: `descricao_padrao`, `lista_descricoes`, `lista_descricoes_normalizadas`.
+- O pipeline Oracle agora utiliza o pacote `tabelas_auditorias` para processar as tabelas finais.
 
 ---
 
 ## 2. Estrutura de pastas
 
 ```text
-fiscal_parquet_app/
+Sistema-Monitoramento/
 ├── app.py
 ├── pipeline_oracle_parquet.py
 ├── requirements.txt
+├── .gitignore
 ├── README.md
 ├── sql/
 │   ├── NFe.sql
 │   ├── NFCe.sql
 │   ├── bloco_h.sql
-│   ├── c170_simplificada.sql
-│   └── fronteira.sql
+│   └── ...
+├── tabelas_auditorias/            # NOVO: Lógica modularizada
+│   ├── constants.py
+│   ├── utils.py
+│   └── processing.py
 ├── fiscal_app/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── table_model.py
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── aggregation_service.py
-│   │   ├── export_service.py
-│   │   ├── parquet_service.py
-│   │   ├── pipeline_service.py
-│   │   └── registry_service.py
-│   ├── ui/
-│   │   ├── __init__.py
-│   │   ├── dialogs.py
-│   │   └── main_window.py
-│   └── utils/
-│       ├── __init__.py
-│       └── text.py
+│   ├── ...
 └── workspace/
     ├── consultas/
     │   └── <cnpj>/
-    │       ├── fronteira_<cnpj>.parquet
     │       ├── nfe_<cnpj>.parquet
     │       ├── nfce_<cnpj>.parquet
-    │       ├── bloco_h_<cnpj>.parquet
-    │       ├── c170_simplificada_<cnpj>.parquet
-    │       └── produtos/
+    │       └── produtos/          # NOVO: Subpasta consolidada
     │           ├── tabela_descricoes_unificadas_<cnpj>.parquet
     │           ├── codigos_desagregados_<cnpj>.parquet
-    │           ├── tabelas_descricoes_unificadas_desagregada_<cnpj>.parquet
-    │           └── tabelas_descricoes_unificadas_desagregada_2_<cnpj>.parquet
+    │           ├── tabela_produtos_<cnpj>.parquet
+    │           ├── tabela_produtos_editavel_<cnpj>.parquet
+    │           └── mapeamento_codigos_<cnpj>.parquet
     └── app_state/
-        ├── cnpjs.json
-        └── operacoes_agregacao.jsonl
+        └── ...
 ```
 
 ---
@@ -83,19 +67,30 @@ fiscal_parquet_app/
 ### Módulos principais
 
 - `app.py`: inicializa a aplicação.
-- `pipeline_oracle_parquet.py`: executa o Oracle → Parquet e gera as 3 tabelas finais por CNPJ.
+- `pipeline_oracle_parquet.py`: executa o Oracle → Parquet e utiliza o pacote `tabelas_auditorias` para gerar os resultados.
+- `tabelas_auditorias/processing.py`: motor de consolidação que agrupa descrições similares e gera o mapeamento de códigos.
 - `fiscal_app/ui/main_window.py`: janela principal, abas, filtros, exportação e agregação.
 - `fiscal_app/services/parquet_service.py`: leitura lazy, filtros e paginação.
 - `fiscal_app/services/export_service.py`: exporta Excel, Word e TXT com HTML.
-- `fiscal_app/services/aggregation_service.py`: cria e atualiza `tabelas_descricoes_unificadas_desagregada_2_<cnpj>.parquet`.
+- `fiscal_app/services/aggregation_service.py`: cria e atualiza as tabelas editáveis.
 - `fiscal_app/services/registry_service.py`: persistência local dos CNPJs consultados.
 - `fiscal_app/services/pipeline_service.py`: dispara o pipeline Oracle a partir da interface.
 
 ---
 
-## 4. Telas principais
+## 4. Novas Funcionalidades: Mapeamento de Códigos
+
+O sistema agora gera automaticamente uma tabela de mapeamento (`mapeamento_codigos_{cnpj}.parquet`) que permite rastrear:
+- **AGRUPADOS**: Códigos originais que foram unificados sob um código padrão.
+- **SEGREGADOS**: Códigos originais que foram divididos em novos códigos (`_separado_XX`).
+- **REPRESENTANTES**: O código escolhido para representar um grupo de descrições similares.
+
+---
+
+## 5. Telas principais
 
 ### Tela 1 — CNPJs e arquivos
+... (restante do documento mantido conforme original) ...
 
 Na lateral esquerda:
 - campo para digitar novo CNPJ;
