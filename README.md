@@ -75,7 +75,7 @@ Sistema-Monitoramento/
 
 - `app.py`: inicializa a aplicação.
 - `pipeline_oracle_parquet.py`: executa o Oracle → Parquet e utiliza o pacote `tabelas_auditorias` para gerar os resultados.
-- `tabelas_auditorias/processing.py`: motor de consolidação que agrupa descrições similares e gera o mapeamento de códigos.
+- `tabelas_auditorias/produtos/processing.py`: motor de consolidação que agrupa descrições similares e gera o mapeamento de códigos.
 - `fiscal_app/ui/main_window.py`: janela principal, abas, filtros, exportação e agregação.
 - `fiscal_app/services/parquet_service.py`: leitura lazy, filtros e paginação.
 - `fiscal_app/services/export_service.py`: exporta Excel, Word e TXT com HTML.

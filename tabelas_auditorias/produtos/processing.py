@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
-from .constants import FINAL_SCHEMA, CODIGOS_DESAG_SCHEMA
-from .utils import (
+from ..constants import FINAL_SCHEMA, CODIGOS_DESAG_SCHEMA
+from ..utils import (
     coalesce_columns_ci,
     load_parquet_if_exists,
     normalizar_texto,
@@ -253,7 +253,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             lista_gtin=("gtin_limpo", unique_sorted),
             lista_unid=("unid_padronizada", unique_sorted),
             lista_fontes=("fonte", unique_sorted),
-            lista_descricoes=("lista_descricoes", lambda x: sorted(set(y for l in x for y in l))),
+            lista_descricoes=("lista_descricoes", lambda x: sorted(set(y for lst in x for y in lst))),
             lista_descricoes_normalizadas=("descricao_normalizada", lambda x: sorted(set(x))),
             lista_co_sefin=("co_sefin_inferido", unique_sorted),
             qtd_codigos=("codigo_lista_fmt", "nunique"),
@@ -263,7 +263,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     )
 
     # Identificação de conflitos de CO_SEFIN
-    tabela_descricoes_unificadas["conflito_co_sefin"] = tabela_descricoes_unificadas["lista_co_sefin"].apply(lambda l: len(l) > 1)
+    tabela_descricoes_unificadas["conflito_co_sefin"] = tabela_descricoes_unificadas["lista_co_sefin"].apply(lambda lst: len(lst) > 1)
     # Define o co_sefin_padrao como o mais frequente no grupo ou o primeiro da lista
     co_sefin_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "co_sefin_inferido", "co_sefin_padrao")
     tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(co_sefin_padrao, on="descricao_normalizada", how="left")
