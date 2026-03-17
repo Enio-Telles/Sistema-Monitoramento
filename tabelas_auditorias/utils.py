@@ -147,59 +147,84 @@ class COSEFINClassifier:
         self.df_cest = load_parquet_if_exists(ref_dir / "sitafe_cest.parquet")
         self.df_ncm = load_parquet_if_exists(ref_dir / "sitafe_ncm.parquet")
 
-        # Normalização preventiva das bases de referência
+        # Normalização preventiva das bases de referência e deduplicação
         if self.df_cest_ncm is not None:
             self.df_cest_ncm["it_nu_cest"] = self.df_cest_ncm["it_nu_cest"].astype("string").str.strip()
             self.df_cest_ncm["it_nu_ncm"] = self.df_cest_ncm["it_nu_ncm"].astype("string").str.strip()
             self.df_cest_ncm["it_co_sefin"] = self.df_cest_ncm["it_co_sefin"].astype("string").str.strip()
+            self.df_cest_ncm = self.df_cest_ncm.drop_duplicates(subset=["it_nu_cest", "it_nu_ncm"], keep="first")
             # F1: it_nu_cest, it_nu_ncm -> it_co_sefin
 
         if self.df_cest is not None:
             self.df_cest["cest"] = self.df_cest["cest"].astype("string").str.strip()
             self.df_cest["co-sefin"] = self.df_cest["co-sefin"].astype("string").str.strip()
+            self.df_cest = self.df_cest.drop_duplicates(subset=["cest"], keep="first")
             # F2: cest -> co-sefin
 
         if self.df_ncm is not None:
             self.df_ncm["ncm"] = self.df_ncm["ncm"].astype("string").str.strip()
             self.df_ncm["co-sefin"] = self.df_ncm["co-sefin"].astype("string").str.strip()
+            self.df_ncm = self.df_ncm.drop_duplicates(subset=["ncm"], keep="first")
             # F3: ncm -> co-sefin
 
     def classify(self, df: pd.DataFrame) -> pd.Series:
         """Inferência hierárquica do co_sefin_inferido baseada em NCM e CEST."""
-        res = pd.Series([None] * len(df), index=df.index, dtype="string")
+        if df.empty:
+            return pd.Series([None] * len(df), index=df.index, dtype="string")
 
-        # Normalização das colunas de entrada para o merge
-        work = pd.DataFrame({
-            "ncm": df["ncm_limpo"].astype("string").str.strip(),
-            "cest": df["cest_limpo"].astype("string").str.strip()
-        }, index=df.index)
+        # 1. Extrair combinações únicas de (ncm_limpo, cest_limpo) para minimizar os joins
+        unique_pairs = df[["ncm_limpo", "cest_limpo"]].drop_duplicates().copy()
+        unique_pairs["ncm"] = unique_pairs["ncm_limpo"].astype("string").str.strip()
+        unique_pairs["cest"] = unique_pairs["cest_limpo"].astype("string").str.strip()
+
+        # Iniciar a coluna de resultado
+        unique_pairs["co_sefin"] = pd.Series([None] * len(unique_pairs), index=unique_pairs.index, dtype="string")
 
         # Tier 1: CEST + NCM
         if self.df_cest_ncm is not None:
-            m1 = work.merge(
+            m1 = unique_pairs.merge(
                 self.df_cest_ncm[["it_nu_cest", "it_nu_ncm", "it_co_sefin"]],
                 left_on=["cest", "ncm"],
                 right_on=["it_nu_cest", "it_nu_ncm"],
                 how="left"
             )
-            res = res.fillna(m1["it_co_sefin"].set_axis(df.index))
+            unique_pairs["co_sefin"] = unique_pairs["co_sefin"].fillna(m1["it_co_sefin"].set_axis(unique_pairs.index))
 
         # Tier 2: CEST
         if self.df_cest is not None:
-            m2 = work.merge(
+            m2 = unique_pairs.merge(
                 self.df_cest[["cest", "co-sefin"]],
                 on="cest",
                 how="left"
             )
-            res = res.fillna(m2["co-sefin"].set_axis(df.index))
+            unique_pairs["co_sefin"] = unique_pairs["co_sefin"].fillna(m2["co-sefin"].set_axis(unique_pairs.index))
 
         # Tier 3: NCM
         if self.df_ncm is not None:
-            m3 = work.merge(
+            m3 = unique_pairs.merge(
                 self.df_ncm[["ncm", "co-sefin"]],
                 on="ncm",
                 how="left"
             )
-            res = res.fillna(m3["co-sefin"].set_axis(df.index))
+            unique_pairs["co_sefin"] = unique_pairs["co_sefin"].fillna(m3["co-sefin"].set_axis(unique_pairs.index))
 
-        return res
+        # 2. Fazer o map de volta para o dataframe original usando left join no index
+
+        # Como o merge original não preserva o índice original e a ordem pode mudar
+        # usamos um truque com o index original
+
+        # Recriamos com o index para garantir alinhamento exato
+        df_idx = df[["ncm_limpo", "cest_limpo"]].copy()
+        df_idx["_orig_index"] = df_idx.index
+
+        # Merge mantendo índice original para reordenação
+        mapped = df_idx.merge(
+            unique_pairs[["ncm_limpo", "cest_limpo", "co_sefin"]],
+            on=["ncm_limpo", "cest_limpo"],
+            how="left"
+        )
+
+        mapped = mapped.set_index("_orig_index")
+        mapped.index.name = df.index.name
+
+        return mapped["co_sefin"].astype("string")
