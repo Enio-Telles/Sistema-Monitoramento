@@ -1,0 +1,327 @@
+# Fiscal Parquet Analyzer
+
+Aplicação desktop em Python para consulta de dados fiscais extraídos do Oracle em Parquet, com foco em desempenho, rastreabilidade e edição controlada da tabela `tabelas_descricoes_unificadas_desagregada`.
+
+## 1. Arquitetura do projeto
+
+A aplicação foi separada em quatro camadas:
+
+- **UI (`fiscal_app/ui`)**: janelas, widgets, navegação e mensagens amigáveis.
+- **Regras de negócio (`fiscal_app/services`)**: filtros, agregação, exportação, cadastro de CNPJs e integração com o pipeline Oracle.
+- **Acesso a dados (`fiscal_app/services/parquet_service.py`)**: leitura lazy com Polars, paginação, seleção de colunas e persistência em Parquet.
+- **Modelo de visualização (`fiscal_app/models`)**: adaptação de DataFrame Polars para `QTableView`.
+
+### Decisões de implementação
+
+- **Polars** é a biblioteca principal para leitura, filtro, paginação e gravação de Parquet.
+- **PySide6** fornece a interface desktop.
+- **openpyxl** gera planilhas Excel.
+- **python-docx** gera relatórios padronizados em Word.
+- **HTML estruturado** é gerado como string e salvo em `.txt` para rastreabilidade.
+- O pipeline Oracle já existente foi mantido e passou a ser chamado pela interface por CNPJ para gerar a tabela `tabela_produtos`.
+- A tabela original `tabela_produtos_<cnpj>.parquet` é preservada; toda edição vai para `tabela_produtos_editavel_<cnpj>.parquet`.
+- Novas colunas: `descricao_padrao`, `lista_descricoes`, `lista_descricoes_normalizadas`.
+
+---
+
+## 2. Estrutura de pastas
+
+```text
+fiscal_parquet_app/
+├── app.py
+├── pipeline_oracle_parquet.py
+├── requirements.txt
+├── README.md
+├── sql/
+│   ├── NFe.sql
+│   ├── NFCe.sql
+│   ├── bloco_h.sql
+│   ├── c170_simplificada.sql
+│   └── fronteira.sql
+├── fiscal_app/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── table_model.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── aggregation_service.py
+│   │   ├── export_service.py
+│   │   ├── parquet_service.py
+│   │   ├── pipeline_service.py
+│   │   └── registry_service.py
+│   ├── ui/
+│   │   ├── __init__.py
+│   │   ├── dialogs.py
+│   │   └── main_window.py
+│   └── utils/
+│       ├── __init__.py
+│       └── text.py
+└── workspace/
+    ├── consultas/
+    │   └── <cnpj>/
+    │       ├── fronteira_<cnpj>.parquet
+    │       ├── nfe_<cnpj>.parquet
+    │       ├── nfce_<cnpj>.parquet
+    │       ├── bloco_h_<cnpj>.parquet
+    │       ├── c170_simplificada_<cnpj>.parquet
+    │       └── produtos/
+    │           ├── tabela_descricoes_unificadas_<cnpj>.parquet
+    │           ├── codigos_desagregados_<cnpj>.parquet
+    │           ├── tabelas_descricoes_unificadas_desagregada_<cnpj>.parquet
+    │           └── tabelas_descricoes_unificadas_desagregada_2_<cnpj>.parquet
+    └── app_state/
+        ├── cnpjs.json
+        └── operacoes_agregacao.jsonl
+```
+
+---
+
+## 3. Código funcional entregue
+
+### Módulos principais
+
+- `app.py`: inicializa a aplicação.
+- `pipeline_oracle_parquet.py`: executa o Oracle → Parquet e gera as 3 tabelas finais por CNPJ.
+- `fiscal_app/ui/main_window.py`: janela principal, abas, filtros, exportação e agregação.
+- `fiscal_app/services/parquet_service.py`: leitura lazy, filtros e paginação.
+- `fiscal_app/services/export_service.py`: exporta Excel, Word e TXT com HTML.
+- `fiscal_app/services/aggregation_service.py`: cria e atualiza `tabelas_descricoes_unificadas_desagregada_2_<cnpj>.parquet`.
+- `fiscal_app/services/registry_service.py`: persistência local dos CNPJs consultados.
+- `fiscal_app/services/pipeline_service.py`: dispara o pipeline Oracle a partir da interface.
+
+---
+
+## 4. Telas principais
+
+### Tela 1 — CNPJs e arquivos
+
+Na lateral esquerda:
+- campo para digitar novo CNPJ;
+- botão **Analisar CNPJ**;
+- lista de CNPJs já consultados;
+- árvore de arquivos Parquet do CNPJ selecionado.
+
+### Tela 2 — Consulta
+
+Na aba **Consulta**:
+- seleção de coluna + operador + valor para filtro;
+- lista de filtros ativos;
+- seleção de colunas visíveis;
+- paginação;
+- visualização da tabela em `QTableView`;
+- exportação para Excel, Word e TXT/HTML.
+
+### Tela 3 — Agregação
+
+Na aba **Agregação**:
+- filtro rápido por trecho de descrição;
+- abertura da tabela editável `_2`;
+- lote com múltiplas linhas selecionadas;
+- campos para descrição resultante e descrição normalizada resultante;
+- geração da tabela editável `_2` mantendo a original intacta;
+- prévia do resultado antes da gravação.
+
+### Tela 4 — Logs
+
+Na aba **Logs**:
+- histórico em JSONL das agregações executadas.
+
+---
+
+## 5. Leitura e exibição de Parquet com Polars
+
+A aplicação usa `pl.scan_parquet()` para montar `LazyFrame` e aplicar filtros antes da materialização. Isso evita carregar o arquivo inteiro sem necessidade.
+
+Fluxo de exibição:
+
+1. abre o schema do Parquet;
+2. aplica filtros em LazyFrame;
+3. calcula total de linhas filtradas;
+4. carrega apenas a página solicitada com `slice(offset, page_size)`;
+5. envia a página para o `QTableView`.
+
+Isso mantém a interface mais leve em tabelas grandes.
+
+---
+
+## 6. Filtros
+
+Filtros suportados:
+- contém
+- igual
+- começa com
+- termina com
+- `>`
+- `>=`
+- `<`
+- `<=`
+- é nulo
+- não é nulo
+
+Para agregação por trecho de descrição, a aba **Agregação** aplica um filtro rápido na coluna `descricao` ou `descrição_normalizada`.
+
+---
+
+## 7. Seleção de colunas
+
+O botão **Selecionar colunas** abre um diálogo com checkboxes.
+
+A seleção controla:
+- o que aparece na grade;
+- a exportação “somente colunas visíveis”;
+- os relatórios Word e TXT/HTML.
+
+---
+
+## 8. Exportação para Excel
+
+Botões disponíveis:
+- **Excel - tabela completa**: exporta o Parquet inteiro, sem filtros.
+- **Excel - tabela filtrada**: exporta todas as colunas após filtros.
+- **Excel - colunas visíveis**: exporta o recorte filtrado considerando só as colunas visíveis.
+
+A exportação usa `openpyxl`.
+
+---
+
+## 9. Exportação para Word
+
+O botão **Relatório Word** gera um `.docx` padronizado com:
+- título;
+- CNPJ;
+- nome da tabela;
+- filtros aplicados;
+- colunas visíveis;
+- quantidade de linhas;
+- tabela com o recorte atual.
+
+Por desempenho, o relatório Word grava até 500 linhas do recorte selecionado. O Excel continua sendo a saída mais adequada para volumes grandes.
+
+---
+
+## 10. Exportação para TXT com HTML
+
+O botão **TXT com HTML** salva o código-fonte HTML do relatório em um arquivo `.txt`.
+
+Esse HTML inclui:
+- cabeçalho do relatório;
+- metadados de geração;
+- filtros aplicados;
+- lista de colunas visíveis;
+- tabela HTML com os dados do recorte atual.
+
+---
+
+## 11. Módulo de agregação
+
+### Objetivo
+
+Permitir que o usuário selecione múltiplas linhas da tabela `tabelas_descricoes_unificadas_desagregada_<cnpj>.parquet` e produza uma nova tabela editável:
+
+- `tabelas_descricoes_unificadas_desagregada_2_<cnpj>.parquet`
+
+A tabela original permanece intacta para controle e auditoria.
+
+### Regra de agregação implementada
+
+Ao agregar linhas selecionadas:
+
+- `codigo_padrao` = código com maior frequência em `lista_codigos` das linhas selecionadas;
+- em empate, vence o **menor código em ordem alfanumérica**;
+- `lista_codigos` = união dos códigos selecionados;
+- `lista_tipo_item`, `lista_ncm`, `lista_cest`, `lista_gtin`, `lista_unid` = união distinta dos valores;
+- `tipo_item_padrao`, `NCM_padrao`, `CEST_padrao`, `GTIN_padrao` = moda entre as linhas, ignorando vazios;
+- `verificado` = `false` após a alteração, para indicar que a linha foi recriada.
+
+### Rastreamento
+
+Cada agregação gera um registro em:
+
+- `workspace/app_state/operacoes_agregacao.jsonl`
+
+Campos logados:
+- timestamp;
+- CNPJ;
+- arquivo destino;
+- linhas de origem;
+- resultado gerado;
+- regra usada para `codigo_padrao`.
+
+---
+
+## 12. Persistência local dos CNPJs
+
+Os CNPJs ficam registrados em:
+
+- `workspace/app_state/cnpjs.json`
+
+O registro guarda:
+- CNPJ;
+- data de cadastro;
+- última execução do pipeline.
+
+A lista exibida na interface combina:
+- o cadastro persistido;
+- as pastas de CNPJ já existentes em `workspace/consultas`.
+
+---
+
+## 13. Instruções de execução
+
+### 13.1 Instalar dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+### 13.2 Configurar acesso Oracle
+
+Crie um arquivo `.env` no diretório do projeto com:
+
+```env
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
+ORACLE_HOST=exa01-scan.sefin.ro.gov.br
+ORACLE_PORT=1521
+ORACLE_SERVICE=sefindw
+```
+
+### 13.3 Executar a interface
+
+```bash
+python app.py
+```
+
+### 13.4 Fluxo de uso recomendado
+
+1. digite um CNPJ e clique em **Analisar CNPJ**;
+2. selecione o CNPJ na lista lateral;
+3. abra uma tabela Parquet;
+4. aplique filtros e selecione colunas;
+5. exporte para Excel, Word ou TXT/HTML;
+6. para agregação, abra a tabela desagregada, filtre por descrição, selecione linhas e envie para a aba **Agregação**;
+7. gere a tabela `_2`.
+
+---
+
+## 14. Melhorias futuras sugeridas
+
+As próximas melhorias mais úteis seriam:
+
+- filtros compostos com grupos AND/OR;
+- edição pontual de campos na tabela `_2` com trilha de auditoria por célula;
+- comparação visual lado a lado entre `_desagregada` e `_desagregada_2`;
+- busca semântica de descrições parecidas;
+- escolha assistida da descrição resultante com sugestões automáticas;
+- exportação de logs também em Parquet;
+- execução do pipeline em segundo plano com barra de progresso por consulta SQL.
+
+---
+
+## Observações finais
+
+- A aplicação evita `pandas` no fluxo de interface. O uso principal é `Polars`.
+- O pipeline Oracle existente ainda usa `pandas` internamente para a etapa de extração e consolidação já construída.
+- Para arquivos muito grandes, a grade exibe por paginação. Isso é proposital para manter a aplicação responsiva.
