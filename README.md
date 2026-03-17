@@ -87,7 +87,48 @@ O sistema agora gera automaticamente uma tabela de mapeamento (`mapeamento_codig
 
 ---
 
-## 5. Telas principais
+## 5. Dicionário de Dados
+
+Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo sistema.
+
+### 5.1 Tabela de Produtos (`tabela_produtos_<cnpj>.parquet`)
+*Tabela consolidada que agrupa descrições similares.*
+
+- **`descrição_normalizada`**: Descrição do produto após limpeza (sem acentos, em maiúsculas, sem caracteres especiais e sem *stopwords*). É a chave de agrupamento.
+- **`descricao`**: Descrição original escolhida como representante principal do grupo.
+- **`codigo_padrao`**: Código de produto escolhido como representante do grupo (baseado na maior frequência; em caso de empate, o menor valor alfanumérico).
+- **`qtd_codigos`**: Quantidade de códigos originais distintos que foram agrupados nesta linha.
+- **`lista_codigos`**: Lista formatada dos códigos originais do grupo e suas respectivas frequências `[codigo; frequencia]`.
+- **`lista_tipo_item` / `lista_ncm` / `lista_cest` / `lista_gtin` / `lista_unid`**: Listas contendo todos os valores distintos encontrados no grupo para cada atributo.
+- **`tipo_item_padrao` / `NCM_padrao` / `CEST_padrao` / `GTIN_padrao`**: Valores sugeridos (moda) para cada atributo dentro do grupo.
+- **`lista_fontes`**: Origens dos dados agrupados (ex: NFe, NFCe, C170, Bloco H).
+- **`lista_descricoes`**: Todas as variações de descrições originais que compõem este grupo.
+- **`lista_descricoes_normalizadas`**: Todas as descrições já normalizadas que foram unificadas.
+- **`descricao_padrao`**: Primeira descrição normalizada identificada para o grupo (usada para rastreabilidade de sistema).
+- **`verificado`**: Campo booleano (`true`/`false`) para controle de revisão manual pelo auditor.
+
+### 5.2 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
+*Tabela que contém as novas entradas para códigos que foram "separados" por possuírem descrições muito diferentes.*
+
+- **`codigo_desagregado`**: O novo código gerado (ex: `codigo_separado_01`).
+- **`descricao`**: Descrição representante deste novo subgrupo.
+- **`lista_tipo_item` / `lista_ncm` / `lista_cest` / ...**: Atributos específicos deste código segregado.
+
+### 5.3 Tabela de Mapeamento (`mapeamento_codigos_{cnpj}.parquet`)
+*Resumo rápido do fluxo de transformação dos códigos.*
+
+- **`codigo_original`**: Código conforme constava no banco de dados Oracle.
+- **`codigo_final`**: O código para o qual ele foi mapeado (pode ser o código padrão do grupo ou um código segregado).
+- **`descricao_final`**: Descrição que representa o código final.
+- **`situacao`**:
+    - `REPRESENTANTE`: O código original foi mantido como o principal do grupo.
+    - `AGRUPADO`: O código original foi movido para baixo de um representante diferente.
+    - `SEGREGADO`: O código original foi desmembrado em novos códigos.
+- **`detalhe`**: Explicação textual concisa da ação realizada.
+
+---
+
+## 6. Telas principais
 
 ### Tela 1 — CNPJs e arquivos
 ... (restante do documento mantido conforme original) ...
