@@ -184,15 +184,19 @@ class AggregationService:
         ]
         aggregated_row = self.build_aggregated_row(rows, descricao_resultante, descricao_normalizada_resultante)
 
-        key_set = set(removed_keys)
-        kept_rows = []
-        for row in current.iter_rows(named=True):
-            key = (str(row.get("descrição_normalizada") or ""), str(row.get("descricao") or ""))
-            if key not in key_set:
-                kept_rows.append(row)
+        if not removed_keys:
+            kept_df = current
+        else:
+            removed_dicts = [{"descrição_normalizada": k[0], "descricao": k[1]} for k in removed_keys]
+            kept_df = current.filter(
+                ~pl.struct(
+                    pl.col("descrição_normalizada").fill_null("").cast(pl.String),
+                    pl.col("descricao").fill_null("").cast(pl.String)
+                ).is_in(removed_dicts)
+            )
 
-        updated_rows = kept_rows + [aggregated_row]
-        updated = pl.DataFrame(updated_rows, schema=current.schema)
+        aggregated_df = pl.DataFrame([aggregated_row], schema=current.schema)
+        updated = pl.concat([kept_df, aggregated_df])
         updated.write_parquet(target, compression="snappy")
 
         self._append_log(cnpj=cnpj, target=target, rows=rows, aggregated_row=aggregated_row)
