@@ -145,8 +145,8 @@ def alinhar_nomenclatura_documento(df: pd.DataFrame) -> pd.DataFrame:
     }
     df = df.rename(columns=rename_map)
     
-    # Identifica colunas dinâmicas de valores anuais
-    vlr_cols = sorted([c for c in df.columns if c.startswith("Vlr_")])
+    # Identifica colunas dinâmicas de valores anuais e estoques
+    vlr_cols = sorted([c for c in df.columns if c.startswith(("Valores_", "Estoque_"))])
 
     ordered_cols = [
         "descrição_normalizada",
@@ -233,20 +233,20 @@ def gerar_somas_anuais(produtos: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFra
         .reset_index()
     )
     
-    # Pivotagem para colunas individuais
-    def get_pref(x):
-        x_str = str(x).upper()
-        if "ENTRADA" in x_str: return "Ent"
-        if "SAIDA" in x_str: return "Sai"
-        if "INVENTARIO" in x_str: return "Inv"
-        return "Out"
+    # Pivotagem para colunas individuais com nomes solicitados
+    def get_col_name(row):
+        tp = str(row["tipo_operacao"]).upper()
+        ano = str(row["ano"])
+        if "ENTRADA" in tp: return f"Valores_Entradas_{ano}"
+        if "SAIDA" in tp: return f"Valores_Saidas_{ano}"
+        if "INVENTARIO" in tp: return f"Estoque_final_{ano}"
+        return f"Outros_{ano}"
 
     df_pivot = somas.copy()
-    df_pivot["col_name"] = df_pivot["tipo_operacao"].apply(get_pref) + "_" + df_pivot["ano"].astype(str)
+    df_pivot["col_name"] = df_pivot.apply(get_col_name, axis=1)
     
-    # Pivotamos apenas o valor_total por enquanto, conforme pedido
+    # Pivotamos os valores totais
     pivoted = df_pivot.pivot(index="descricao_normalizada", columns="col_name", values="valor_total").fillna(0)
-    pivoted.columns = [f"Vlr_{c}" for c in pivoted.columns]
     pivoted = pivoted.reset_index()
 
     return somas.sort_values(["descricao_normalizada", "ano", "tipo_operacao"], kind="stable"), pivoted
@@ -416,8 +416,8 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     # Adiciona as colunas de somas anuais pivotadas
     tabela_somas, tabela_somas_pivot = gerar_somas_anuais(produtos)
     tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(tabela_somas_pivot, on="descricao_normalizada", how="left")
-    # Preenche com 0 as colunas de valor que vieram do merge
-    vlr_cols = [c for c in tabela_descricoes_unificadas.columns if c.startswith("Vlr_")]
+    # Preenche com 0 as colunas de valor que vieram do merge (Valores_ ou Estoque_)
+    vlr_cols = [c for c in tabela_descricoes_unificadas.columns if c.startswith(("Valores_", "Estoque_"))]
     tabela_descricoes_unificadas[vlr_cols] = tabela_descricoes_unificadas[vlr_cols].fillna(0)
 
     tabela_descricoes_unificadas = alinhar_nomenclatura_documento(tabela_descricoes_unificadas)
@@ -509,7 +509,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     # Adiciona as colunas de somas anuais pivotadas também na tabela final
     if not tabela_somas_pivot.empty:
         tabela_final = tabela_final.merge(tabela_somas_pivot, on="descricao_normalizada", how="left")
-        vlr_cols_final = [c for c in tabela_final.columns if c.startswith("Vlr_")]
+        vlr_cols_final = [c for c in tabela_final.columns if c.startswith(("Valores_", "Estoque_"))]
         tabela_final[vlr_cols_final] = tabela_final[vlr_cols_final].fillna(0)
 
     tabela_final = alinhar_nomenclatura_documento(tabela_final)

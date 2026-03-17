@@ -118,7 +118,8 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 - **`lista_descricoes_normalizadas`**: Todas as descrições já normalizadas que foram unificadas.
 - **`descricao_padrao`**: Primeira descrição normalizada identificada para o grupo (usada para rastreabilidade de sistema).
 - **`lista_chaves_produto`**: Lista de IDs do índice (`chave_produto`) que compõem este grupo.
-- **`Vlr_Ent_<ano>` / `Vlr_Sai_<ano>` / `Vlr_Inv_<ano>`**: Somatórios anuais dos valores de Entrada, Saída e Inventário Final para o grupo.
+- **`Valores_Entradas_<ano>` / `Valores_Saidas_<ano>`**: Somatórios anuais dos valores de Entrada e Saída para o grupo.
+- **`Estoque_final_<ano>`**: Valores de Inventário Final (Estoque) para o grupo no ano respectivo.
 - **`co_sefin_inferido`**: Código SEFIN inferido via hierarquia (NCM+CEST -> CEST -> NCM).
 - **`conflito_co_sefin`**: Flag booleana que indica se o grupo possui múltiplos códigos SEFIN inferidos diferentes entre seus membros.
 - **`verificado`**: Campo booleano (`true`/`false`) para controle de revisão manual pelo auditor.
