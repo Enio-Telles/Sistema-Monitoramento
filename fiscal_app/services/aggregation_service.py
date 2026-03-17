@@ -63,13 +63,14 @@ class AggregationService:
         parsed: list[tuple[str, int, str]] = []
         for raw in raw_values:
             for entry in AggregationService._ensure_list(raw):
-                match = CODE_ENTRY_RE.match(entry)
-                if match:
-                    codigo = match.group(1).strip()
-                    freq = int(match.group(2))
-                    parsed.append((codigo, freq, entry))
-                else:
-                    parsed.append((entry, 1, entry))
+                if entry and entry[0] == '[':
+                    match = CODE_ENTRY_RE.match(entry)
+                    if match:
+                        codigo = match.group(1).strip()
+                        freq = int(match.group(2))
+                        parsed.append((codigo, freq, entry))
+                        continue
+                parsed.append((entry, 1, entry))
         return parsed
 
     @staticmethod
