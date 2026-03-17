@@ -272,7 +272,7 @@ def main() -> int:
 
         if not args.extrair_apenas:
             materializar_tabelas_consolidacao(pasta_cnpj=pasta_cnpj, cnpj=cnpj)
-            log("Tabelas finais da pasta produtos geradas com sucesso.")
+            log("Tabelas finais, índice de produtos e códigos consolidados gerados com sucesso.")
 
         log(f"Saída concluída em {pasta_cnpj}")
         return 0
