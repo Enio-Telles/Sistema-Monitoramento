@@ -62,7 +62,8 @@ Sistema-Monitoramento/
     │           ├── codigos_desagregados_<cnpj>.parquet
     │           ├── tabela_produtos_<cnpj>.parquet
     │           ├── tabela_produtos_editavel_<cnpj>.parquet
-    │           ├── tabela_itens_auditados_<cnpj>.parquet # NOVO: Detalhe por item
+    │           ├── tabela_itens_auditados_<cnpj>.parquet
+    │           ├── tabela_somas_anuais_<cnpj>.parquet   # NOVO: Somas por ano/operacao
     │           └── mapeamento_codigos_<cnpj>.parquet
     └── app_state/
         └── ...
@@ -130,7 +131,16 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 - **`descricao_normalizada`**: Chave de limpeza usada para agrupamento.
 - **`co_sefin_inferido`**: Código SEFIN atribuído individualmente a este item.
 
-### 5.3 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
+### 5.3 Tabela de Somas Anuais (`tabela_somas_anuais_<cnpj>.parquet`)
+*Tabela de apoio para produtividade, com totais por produto, ano e tipo de operação.*
+
+- **`descricao_normalizada`**: Chave de limpeza para agrupamento.
+- **`ano`**: Ano extraído da data de movimentação.
+- **`tipo_operacao`**: Categoria da operação (Entrada, Saída, Inventário).
+- **`qtd_total`**: Soma das quantidades movimentadas.
+- **`valor_total`**: Soma dos valores de produto.
+
+### 5.4 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
 *Tabela que contém as novas entradas para códigos que foram "separados" por possuírem descrições muito diferentes.*
 
 - **`codigo_desagregado`**: O novo código gerado (ex: `codigo_separado_01`).

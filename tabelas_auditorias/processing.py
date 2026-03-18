@@ -33,6 +33,9 @@ def canonicalize_nfe_like(df: pd.DataFrame, fonte: str) -> pd.DataFrame:
             "cest": coalesce_columns_ci(df, ["prod_cest", "cest"]).astype("string"),
             "gtin": coalesce_columns_ci(df, ["prod_cean", "prod_ceantrib", "prod_cbarra", "prod_ean", "prod_eantrib"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["prod_ucom", "prod_utrib", "unid"]).astype("string"),
+            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao"]).astype("string"),
+            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["prod_qcom", "qtd"]), errors="coerce").fillna(0),
+            "valor": pd.to_numeric(coalesce_columns_ci(df, ["prod_vprod", "vl_item"]), errors="coerce").fillna(0),
             "data_mov": data_mov,
         }
     )
@@ -51,6 +54,11 @@ def canonicalize_c170(df: pd.DataFrame) -> pd.DataFrame:
             "cest": coalesce_columns_ci(df, ["cest"]).astype("string"),
             "gtin": coalesce_columns_ci(df, ["cod_barra"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["unid"]).astype("string"),
+            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao", "ind_oper"]).map(
+                lambda x: "0 - ENTRADA" if str(x) in ("0", "ENTRADA") else ("1 - SAIDA" if str(x) in ("1", "SAIDA") else "0 - ENTRADA")
+            ).astype("string"),
+            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["qtd"]), errors="coerce").fillna(0),
+            "valor": pd.to_numeric(coalesce_columns_ci(df, ["vl_item"]), errors="coerce").fillna(0),
             "data_mov": data_mov,
         }
     )
@@ -69,6 +77,29 @@ def canonicalize_bloco_h(df: pd.DataFrame) -> pd.DataFrame:
             "cest": coalesce_columns_ci(df, ["cest"]).astype("string"),
             "gtin": coalesce_columns_ci(df, ["cod_barra"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["unidade_medida"]).astype("string"),
+            "tipo_operacao": pd.Series(["2 - INVENTARIO"] * len(df), index=df.index, dtype="string"),
+            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["quantidade"]), errors="coerce").fillna(0),
+            "valor": pd.to_numeric(coalesce_columns_ci(df, ["valor_item"]), errors="coerce").fillna(0),
+            "data_mov": data_mov,
+        }
+    )
+
+def canonicalize_fronteira(df: pd.DataFrame) -> pd.DataFrame:
+    data_mov = pd.to_datetime(coalesce_columns_ci(df, ["dhemi"]), errors="coerce")
+    return pd.DataFrame(
+        {
+            "fonte": "fronteira",
+            "codigo": coalesce_columns_ci(df, ["cod_item"]).astype("string"),
+            "descricao": coalesce_columns_ci(df, ["desc_item"]).astype("string"),
+            "descr_compl": pd.Series([None] * len(df), index=df.index, dtype="string"),
+            "tipo_item": pd.Series([None] * len(df), index=df.index, dtype="string"),
+            "ncm": coalesce_columns_ci(df, ["ncm"]).astype("string"),
+            "cest": coalesce_columns_ci(df, ["cest"]).astype("string"),
+            "gtin": pd.Series([None] * len(df), index=df.index, dtype="string"),
+            "unid": pd.Series([None] * len(df), index=df.index, dtype="string"),
+            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao"]).astype("string"),
+            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["qtd_comercial"]), errors="coerce").fillna(0),
+            "valor": pd.to_numeric(coalesce_columns_ci(df, ["valor_produto"]), errors="coerce").fillna(0),
             "data_mov": data_mov,
         }
     )
@@ -141,6 +172,7 @@ def build_produtos_base(pasta_cnpj: Path, cnpj: str) -> pd.DataFrame:
     nfce = load_parquet_if_exists(pasta_cnpj / f"nfce_{cnpj}.parquet")
     c170 = load_parquet_if_exists(pasta_cnpj / f"c170_simplificada_{cnpj}.parquet")
     bloco_h = load_parquet_if_exists(pasta_cnpj / f"bloco_h_{cnpj}.parquet")
+    fronteira = load_parquet_if_exists(pasta_cnpj / f"fronteira_{cnpj}.parquet")
 
     if nfe is not None:
         frames.append(canonicalize_nfe_like(nfe, "nfe"))
@@ -150,14 +182,33 @@ def build_produtos_base(pasta_cnpj: Path, cnpj: str) -> pd.DataFrame:
         frames.append(canonicalize_c170(c170))
     if bloco_h is not None:
         frames.append(canonicalize_bloco_h(bloco_h))
+    if fronteira is not None:
+        frames.append(canonicalize_fronteira(fronteira))
 
     if not frames:
-        return pd.DataFrame(columns=["fonte", "codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid", "data_mov"])
+        return pd.DataFrame(columns=["fonte", "codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid", "tipo_operacao", "qtd", "valor", "data_mov"])
 
     produtos = pd.concat(frames, ignore_index=True)
-    for col in ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid"]:
+    for col in ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid", "tipo_operacao"]:
         produtos[col] = produtos[col].astype("string").str.strip()
     return produtos
+
+
+def gerar_somas_anuais(produtos: pd.DataFrame) -> pd.DataFrame:
+    df = produtos.copy()
+    df["ano"] = df["data_mov"].dt.year
+    df = df[df["ano"].notna()].copy()
+    df["ano"] = df["ano"].astype(int)
+    
+    somas = (
+        df.groupby(["descricao_normalizada", "ano", "tipo_operacao"], dropna=False)
+        .agg(
+            qtd_total=("qtd", "sum"),
+            valor_total=("valor", "sum")
+        )
+        .reset_index()
+    )
+    return somas.sort_values(["descricao_normalizada", "ano", "tipo_operacao"], kind="stable")
 
 
 def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, Path]:
@@ -430,11 +481,16 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     path_desag = produtos_dir / f"codigos_desagregados_{cnpj}.parquet"
     path_final = produtos_dir / f"tabela_produtos_{cnpj}.parquet"
     path_itens = produtos_dir / f"tabela_itens_auditados_{cnpj}.parquet"
+    path_somas = produtos_dir / f"tabela_somas_anuais_{cnpj}.parquet"
 
     tabela_descricoes_unificadas.to_parquet(path_unif, index=False)
     codigos_desagregados.to_parquet(path_desag, index=False)
     tabela_final.to_parquet(path_final, index=False)
     mapeamento.to_parquet(produtos_dir / f"mapeamento_codigos_{cnpj}.parquet", index=False)
+
+    # Gerar e salvar somas anuais
+    tabela_somas = gerar_somas_anuais(produtos)
+    tabela_somas.to_parquet(path_somas, index=False)
 
     # Tabela detalhada de itens com todas as características solicitadas
     column_order_itens = [
@@ -450,5 +506,6 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         "codigos_desagregados": path_desag,
         "tabela_produtos": path_final,
         "tabela_itens": path_itens,
+        "tabela_somas": path_somas,
         "mapeamento_codigos": produtos_dir / f"mapeamento_codigos_{cnpj}.parquet",
     }
