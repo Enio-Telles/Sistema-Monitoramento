@@ -71,7 +71,7 @@ def _normalize_unit_list(values: Iterable[Optional[str]]) -> List[str]:
     list[str]
         Lista ordenada (ordem lexicográfica) de unidades únicas.
     """
-    cleaned = [str(v).strip() for v in values if v not in (None, "")]
+    cleaned = [str(v).strip() for v in values if pd.notna(v) and str(v).strip() != ""]
     return sorted(set(cleaned))
 
 
