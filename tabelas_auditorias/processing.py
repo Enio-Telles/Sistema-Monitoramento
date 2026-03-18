@@ -200,8 +200,11 @@ def build_produtos_base(pasta_cnpj: Path, cnpj: str) -> pd.DataFrame:
     return produtos
 
 
-def gerar_somas_anuais(produtos: pd.DataFrame) -> pd.DataFrame:
+def gerar_somas_anuais(produtos: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = produtos.copy()
+    if df.empty or "data_mov" not in df.columns:
+        return pd.DataFrame(), pd.DataFrame(columns=["descricao_normalizada"])
+
     df["ano"] = df["data_mov"].dt.year
     df = df[df["ano"].notna()].copy()
     df["ano"] = df["ano"].astype(int)
@@ -214,7 +217,24 @@ def gerar_somas_anuais(produtos: pd.DataFrame) -> pd.DataFrame:
         )
         .reset_index()
     )
-    return somas.sort_values(["descricao_normalizada", "ano", "tipo_operacao"], kind="stable")
+    
+    # Pivotagem para colunas individuais
+    def get_pref(x):
+        x_str = str(x).upper()
+        if "ENTRADA" in x_str: return "Ent"
+        if "SAIDA" in x_str: return "Sai"
+        if "INVENTARIO" in x_str: return "Inv"
+        return "Out"
+
+    df_pivot = somas.copy()
+    df_pivot["col_name"] = df_pivot["tipo_operacao"].apply(get_pref) + "_" + df_pivot["ano"].astype(str)
+    
+    # Pivotamos apenas o valor_total por enquanto, conforme pedido
+    pivoted = df_pivot.pivot(index="descricao_normalizada", columns="col_name", values="valor_total").fillna(0)
+    pivoted.columns = [f"Vlr_{c}" for c in pivoted.columns]
+    pivoted = pivoted.reset_index()
+
+    return somas.sort_values(["descricao_normalizada", "ano", "tipo_operacao"], kind="stable"), pivoted
 
 
 def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, Path]:
@@ -377,6 +397,14 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     ].sort_values(["descricao_normalizada", "descricao"], kind="stable")
     tabela_descricoes_unificadas["verificado"] = False
     tabela_descricoes_unificadas = tabela_descricoes_unificadas.rename(columns={"co_sefin_padrao": "co_sefin_inferido"})
+
+    # Adiciona as colunas de somas anuais pivotadas
+    tabela_somas, tabela_somas_pivot = gerar_somas_anuais(produtos)
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(tabela_somas_pivot, on="descricao_normalizada", how="left")
+    # Preenche com 0 as colunas de valor que vieram do merge
+    vlr_cols = [c for c in tabela_descricoes_unificadas.columns if c.startswith("Vlr_")]
+    tabela_descricoes_unificadas[vlr_cols] = tabela_descricoes_unificadas[vlr_cols].fillna(0)
+
     tabela_descricoes_unificadas = alinhar_nomenclatura_documento(tabela_descricoes_unificadas)
 
     codigos_ambiguos = set(codigo_stats.loc[codigo_stats["qtd_descricoes_diferentes"] > 1, "codigo"].astype(str))
@@ -462,6 +490,13 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     )
     tabela_final["lista_codigos"] = tabela_final["descricao_normalizada"].map(montar_lista_codigos_desag)
     tabela_final = tabela_final.sort_values(["descricao_normalizada", "descricao"], kind="stable")
+
+    # Adiciona as colunas de somas anuais pivotadas também na tabela final
+    if not tabela_somas_pivot.empty:
+        tabela_final = tabela_final.merge(tabela_somas_pivot, on="descricao_normalizada", how="left")
+        vlr_cols_final = [c for c in tabela_final.columns if c.startswith("Vlr_")]
+        tabela_final[vlr_cols_final] = tabela_final[vlr_cols_final].fillna(0)
+
     tabela_final = alinhar_nomenclatura_documento(tabela_final)
 
     # Geração da Tabela de Mapeamento de Códigos
@@ -517,8 +552,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     mapeamento.to_parquet(produtos_dir / f"mapeamento_codigos_{cnpj}.parquet", index=False)
     indice_df.to_parquet(path_indice, index=False)
 
-    # Gerar e salvar somas anuais
-    tabela_somas = gerar_somas_anuais(produtos)
+    # Gravar somas anuais (já geradas acima)
     tabela_somas.to_parquet(path_somas, index=False)
 
     # Tabela detalhada de itens com todas as características solicitadas
