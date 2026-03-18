@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 
-class ColumnSelectorDialog(QDialog):
+class DialogoSelecaoColunas(QDialog):
     def __init__(self, columns: list[str], visible_columns: list[str], parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Selecionar colunas visíveis")
@@ -32,7 +32,7 @@ class ColumnSelectorDialog(QDialog):
         layout.addWidget(self.list_widget)
         layout.addWidget(buttons)
 
-    def selected_columns(self) -> list[str]:
+    def colunas_selecionadas(self) -> list[str]:
         selected = []
         for idx in range(self.list_widget.count()):
             item = self.list_widget.item(idx)

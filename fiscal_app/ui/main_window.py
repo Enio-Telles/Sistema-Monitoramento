@@ -42,7 +42,7 @@ from fiscal_app.services.export_service import ExportService
 from fiscal_app.services.parquet_service import FilterCondition, ParquetService
 from fiscal_app.services.pipeline_service import PipelineResult, PipelineService
 from fiscal_app.services.registry_service import RegistryService
-from fiscal_app.ui.dialogs import ColumnSelectorDialog
+from fiscal_app.ui.dialogs import DialogoSelecaoColunas
 from fiscal_app.utils.text import display_cell, normalize_text, remove_accents
 
 
@@ -103,12 +103,12 @@ class MainWindow(QMainWindow):
         self.aggregation_results: list[dict] = []
         self.pipeline_worker: PipelineWorker | None = None
 
-        self._build_ui()
-        self._connect_signals()
-        self.refresh_cnpjs()
-        self.refresh_logs()
+        self._construir_ui()
+        self._conectar_sinais()
+        self.atualizar_cnpjs()
+        self.atualizar_logs()
 
-    def _build_ui(self) -> None:
+    def _construir_ui(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
         root_layout = QVBoxLayout(central)
@@ -116,15 +116,15 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Horizontal)
         root_layout.addWidget(splitter)
 
-        splitter.addWidget(self._build_left_panel())
-        splitter.addWidget(self._build_right_panel())
+        splitter.addWidget(self._construir_painel_esquerdo())
+        splitter.addWidget(self._construir_painel_direito())
         splitter.setSizes([310, 1200])
 
         self.status = QStatusBar()
         self.setStatusBar(self.status)
         self.status.showMessage("Pronto.")
 
-    def _build_left_panel(self) -> QWidget:
+    def _construir_painel_esquerdo(self) -> QWidget:
         panel = QWidget()
         layout = QVBoxLayout(panel)
 
@@ -173,7 +173,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(notes)
         return panel
 
-    def _build_right_panel(self) -> QWidget:
+    def _construir_painel_direito(self) -> QWidget:
         panel = QWidget()
         layout = QVBoxLayout(panel)
 
@@ -185,13 +185,13 @@ class MainWindow(QMainWindow):
         layout.addLayout(header)
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self._build_tab_consulta(), "Consulta")
-        self.tabs.addTab(self._build_tab_agregacao(), "Agregação")
-        self.tabs.addTab(self._build_tab_logs(), "Logs")
+        self.tabs.addTab(self._construir_aba_consulta(), "Consulta")
+        self.tabs.addTab(self._construir_aba_agregacao(), "Agregação")
+        self.tabs.addTab(self._construir_aba_logs(), "Logs")
         layout.addWidget(self.tabs)
         return panel
 
-    def _build_tab_consulta(self) -> QWidget:
+    def _construir_aba_consulta(self) -> QWidget:
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
@@ -283,7 +283,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.table_view, 1)
         return tab
 
-    def _build_tab_agregacao(self) -> QWidget:
+    def _construir_aba_agregacao(self) -> QWidget:
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
@@ -345,7 +345,7 @@ class MainWindow(QMainWindow):
 
         return tab
 
-    def _build_tab_logs(self) -> QWidget:
+    def _construir_aba_logs(self) -> QWidget:
         tab = QWidget()
         layout = QVBoxLayout(tab)
         self.log_view = QPlainTextEdit()
@@ -353,41 +353,41 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.log_view)
         return tab
 
-    def _connect_signals(self) -> None:
-        self.btn_refresh_cnpjs.clicked.connect(self.refresh_cnpjs)
-        self.btn_run_pipeline.clicked.connect(self.run_pipeline_for_input)
-        self.cnpj_list.itemSelectionChanged.connect(self.on_cnpj_selected)
-        self.file_tree.itemClicked.connect(self.on_file_activated)
-        self.file_tree.itemDoubleClicked.connect(self.on_file_activated)
-        self.btn_open_cnpj_folder.clicked.connect(self.open_cnpj_folder)
+    def _conectar_sinais(self) -> None:
+        self.btn_refresh_cnpjs.clicked.connect(self.atualizar_cnpjs)
+        self.btn_run_pipeline.clicked.connect(self.executar_pipeline_por_input)
+        self.cnpj_list.itemSelectionChanged.connect(self.ao_selecionar_cnpj)
+        self.file_tree.itemClicked.connect(self.ao_ativar_arquivo)
+        self.file_tree.itemDoubleClicked.connect(self.ao_ativar_arquivo)
+        self.btn_open_cnpj_folder.clicked.connect(self.abrir_pasta_cnpj)
 
-        self.btn_add_filter.clicked.connect(self.add_filter_from_form)
-        self.btn_clear_filters.clicked.connect(self.clear_filters)
-        self.btn_remove_filter.clicked.connect(self.remove_selected_filter)
-        self.btn_choose_columns.clicked.connect(self.choose_columns)
-        self.btn_prev_page.clicked.connect(self.prev_page)
-        self.btn_next_page.clicked.connect(self.next_page)
+        self.btn_add_filter.clicked.connect(self.adicionar_filtro_do_formulario)
+        self.btn_clear_filters.clicked.connect(self.limpar_filtros)
+        self.btn_remove_filter.clicked.connect(self.remover_filtro_selecionado)
+        self.btn_choose_columns.clicked.connect(self.escolher_colunas)
+        self.btn_prev_page.clicked.connect(self.pagina_anterior)
+        self.btn_next_page.clicked.connect(self.proxima_pagina)
 
-        self.btn_export_excel_full.clicked.connect(lambda: self.export_excel("full"))
-        self.btn_export_excel_filtered.clicked.connect(lambda: self.export_excel("filtered"))
-        self.btn_export_excel_visible.clicked.connect(lambda: self.export_excel("visible"))
-        self.btn_export_docx.clicked.connect(self.export_docx)
-        self.btn_export_html_txt.clicked.connect(self.export_txt_html)
+        self.btn_export_excel_full.clicked.connect(lambda: self.exportar_excel("full"))
+        self.btn_export_excel_filtered.clicked.connect(lambda: self.exportar_excel("filtered"))
+        self.btn_export_excel_visible.clicked.connect(lambda: self.exportar_excel("visible"))
+        self.btn_export_docx.clicked.connect(self.exportar_docx)
+        self.btn_export_html_txt.clicked.connect(self.exportar_txt_html)
 
-        self.btn_open_editable_table.clicked.connect(self.open_editable_aggregation_table)
-        self.btn_execute_aggregation.clicked.connect(self.execute_aggregation)
+        self.btn_open_editable_table.clicked.connect(self.abrir_tabela_agregacao_editavel)
+        self.btn_execute_aggregation.clicked.connect(self.executar_agregacao)
 
         for qf in [self.qf_norm, self.qf_desc, self.qf_ncm, self.qf_cest,
                    self.aqf_norm, self.aqf_desc, self.aqf_ncm, self.aqf_cest]:
-            qf.returnPressed.connect(self.apply_quick_filters)
+            qf.returnPressed.connect(self.aplicar_filtros_rapidos)
 
-    def show_error(self, title: str, message: str) -> None:
+    def mostrar_erro(self, title: str, message: str) -> None:
         QMessageBox.critical(self, title, message)
 
-    def show_info(self, title: str, message: str) -> None:
+    def mostrar_info(self, title: str, message: str) -> None:
         QMessageBox.information(self, title, message)
 
-    def refresh_cnpjs(self) -> None:
+    def atualizar_cnpjs(self) -> None:
         known = {record.cnpj for record in self.registry_service.list_records()}
         known.update(self.parquet_service.list_cnpjs())
         current = self.state.current_cnpj
@@ -399,11 +399,11 @@ class MainWindow(QMainWindow):
             if matches:
                 self.cnpj_list.setCurrentItem(matches[0])
 
-    def run_pipeline_for_input(self) -> None:
+    def executar_pipeline_por_input(self) -> None:
         try:
             cnpj = self.pipeline_service.sanitize_cnpj(self.cnpj_input.text())
         except Exception as exc:
-            self.show_error("CNPJ inválido", str(exc))
+            self.mostrar_erro("CNPJ inválido", str(exc))
             return
 
         self.btn_run_pipeline.setEnabled(False)
@@ -411,35 +411,35 @@ class MainWindow(QMainWindow):
         
         data_limite = self.date_input.date().toString("dd/MM/yyyy")
         self.pipeline_worker = PipelineWorker(self.pipeline_service, cnpj, data_limite)
-        self.pipeline_worker.finished_ok.connect(self.on_pipeline_finished)
-        self.pipeline_worker.failed.connect(self.on_pipeline_failed)
+        self.pipeline_worker.finished_ok.connect(self.ao_terminar_pipeline)
+        self.pipeline_worker.failed.connect(self.ao_falhar_pipeline)
         self.pipeline_worker.start()
 
-    def on_pipeline_finished(self, result: PipelineResult) -> None:
+    def ao_terminar_pipeline(self, result: PipelineResult) -> None:
         self.btn_run_pipeline.setEnabled(True)
         self.registry_service.upsert(result.cnpj, ran_now=True)
         self.status.showMessage(f"Pipeline concluído para {result.cnpj}.")
-        self.refresh_cnpjs()
+        self.atualizar_cnpjs()
         matches = self.cnpj_list.findItems(result.cnpj, Qt.MatchExactly)
         if matches:
             self.cnpj_list.setCurrentItem(matches[0])
-        self.show_info("Consulta concluída", result.stdout or f"CNPJ {result.cnpj} processado com sucesso.")
+        self.mostrar_info("Consulta concluída", result.stdout or f"CNPJ {result.cnpj} processado com sucesso.")
 
-    def on_pipeline_failed(self, message: str) -> None:
+    def ao_falhar_pipeline(self, message: str) -> None:
         self.btn_run_pipeline.setEnabled(True)
         self.status.showMessage("Falha na execução do pipeline.")
-        self.show_error("Falha ao consultar o banco", message)
+        self.mostrar_erro("Falha ao consultar o banco", message)
 
-    def on_cnpj_selected(self) -> None:
+    def ao_selecionar_cnpj(self) -> None:
         item = self.cnpj_list.currentItem()
         if item is None:
             return
         cnpj = item.text()
         self.state.current_cnpj = cnpj
         self.registry_service.upsert(cnpj, ran_now=False)
-        self.refresh_file_tree(cnpj)
+        self.atualizar_arvore_arquivos(cnpj)
 
-    def refresh_file_tree(self, cnpj: str) -> None:
+    def atualizar_arvore_arquivos(self, cnpj: str) -> None:
         self.file_tree.clear()
         base_dir = self.parquet_service.cnpj_dir(cnpj)
         raw_root = QTreeWidgetItem(["Tabelas brutas", str(base_dir)])
@@ -459,9 +459,9 @@ class MainWindow(QMainWindow):
         prod_root.setExpanded(True)
         if first_leaf is not None:
             self.file_tree.setCurrentItem(first_leaf)
-            self.on_file_activated(first_leaf, 0)
+            self.ao_ativar_arquivo(first_leaf, 0)
 
-    def on_file_activated(self, item: QTreeWidgetItem, _column: int) -> None:
+    def ao_ativar_arquivo(self, item: QTreeWidgetItem, _column: int) -> None:
         raw_path = item.data(0, Qt.UserRole)
         if not raw_path:
             return
@@ -470,25 +470,25 @@ class MainWindow(QMainWindow):
         self.state.filters = []
         self.current_page_df_all = pl.DataFrame()
         self.current_page_df_visible = pl.DataFrame()
-        self.load_current_file(reset_columns=True)
+        self.carregar_arquivo_atual(reset_columns=True)
         self.tabs.setCurrentIndex(0)
 
-    def load_current_file(self, reset_columns: bool = False) -> None:
+    def carregar_arquivo_atual(self, reset_columns: bool = False) -> None:
         if self.state.current_file is None:
             return
         try:
             all_columns = self.parquet_service.get_schema(self.state.current_file)
         except Exception as exc:
-            self.show_error("Erro ao abrir Parquet", str(exc))
+            self.mostrar_erro("Erro ao abrir Parquet", str(exc))
             return
         self.state.all_columns = all_columns
         if reset_columns or not self.state.visible_columns:
             self.state.visible_columns = all_columns[:]
         self.filter_column.clear()
         self.filter_column.addItems(all_columns)
-        self.reload_table()
+        self.recarregar_tabela()
 
-    def reload_table(self, update_main_view: bool = True) -> None:
+    def recarregar_tabela(self, update_main_view: bool = True) -> None:
         if self.state.current_file is None:
             return
         try:
@@ -505,20 +505,20 @@ class MainWindow(QMainWindow):
 
             if update_main_view:
                 self.table_model.set_dataframe(self.current_page_df_visible)
-                self._update_page_label()
-                self._update_context_label()
-                self._refresh_filter_list_widget()
+                self._atualizar_label_pagina()
+                self._atualizar_label_contexto()
+                self._atualizar_widget_lista_filtros()
                 self.table_view.resizeColumnsToContents()
         except Exception as exc:
-            self.show_error("Erro ao carregar dados", str(exc))
+            self.mostrar_erro("Erro ao carregar dados", str(exc))
 
-    def _update_page_label(self) -> None:
+    def _atualizar_label_pagina(self) -> None:
         total_pages = max(1, ((self.state.total_rows - 1) // self.state.page_size) + 1 if self.state.total_rows else 1)
         if self.state.current_page > total_pages:
             self.state.current_page = total_pages
         self.lbl_page.setText(f"Página {self.state.current_page}/{total_pages} | Linhas filtradas: {self.state.total_rows}")
 
-    def _update_context_label(self) -> None:
+    def _atualizar_label_contexto(self) -> None:
         if self.state.current_file is None:
             self.lbl_context.setText("Nenhum arquivo selecionado")
             return
@@ -527,73 +527,73 @@ class MainWindow(QMainWindow):
             f"Colunas visíveis: {len(self.state.visible_columns or [])}/{len(self.state.all_columns or [])}"
         )
 
-    def add_filter_from_form(self) -> None:
+    def adicionar_filtro_do_formulario(self) -> None:
         column = self.filter_column.currentText().strip()
         operator = self.filter_operator.currentText().strip()
         value = self.filter_value.text().strip()
         if not column:
-            self.show_error("Filtro inválido", "Selecione uma coluna para filtrar.")
+            self.mostrar_erro("Filtro inválido", "Selecione uma coluna para filtrar.")
             return
         if operator not in {"é nulo", "não é nulo"} and value == "":
-            self.show_error("Filtro inválido", "Informe um valor para o filtro escolhido.")
+            self.mostrar_erro("Filtro inválido", "Informe um valor para o filtro escolhido.")
             return
         self.state.filters = self.state.filters or []
         self.state.filters.append(FilterCondition(column=column, operator=operator, value=value))
         self.state.current_page = 1
         self.filter_value.clear()
-        self.reload_table()
+        self.recarregar_tabela()
 
-    def clear_filters(self) -> None:
+    def limpar_filtros(self) -> None:
         self.state.filters = []
         self.state.current_page = 1
-        self.reload_table()
+        self.recarregar_tabela()
 
-    def remove_selected_filter(self) -> None:
+    def remover_filtro_selecionado(self) -> None:
         row = self.filter_list.currentRow()
         if row < 0 or not self.state.filters:
             return
         self.state.filters.pop(row)
         self.state.current_page = 1
-        self.reload_table()
+        self.recarregar_tabela()
 
-    def _refresh_filter_list_widget(self) -> None:
+    def _atualizar_widget_lista_filtros(self) -> None:
         self.filter_list.clear()
         for cond in self.state.filters or []:
             text = f"{cond.column} {cond.operator} {cond.value}".strip()
             self.filter_list.addItem(text)
 
-    def choose_columns(self) -> None:
+    def escolher_colunas(self) -> None:
         if not self.state.all_columns:
             return
-        dialog = ColumnSelectorDialog(self.state.all_columns, self.state.visible_columns or self.state.all_columns, self)
+        dialog = DialogoSelecaoColunas(self.state.all_columns, self.state.visible_columns or self.state.all_columns, self)
         if dialog.exec():
-            selected = dialog.selected_columns()
+            selected = dialog.colunas_selecionadas()
             if not selected:
-                self.show_error("Seleção inválida", "Pelo menos uma coluna deve permanecer visível.")
+                self.mostrar_erro("Seleção inválida", "Pelo menos uma coluna deve permanecer visível.")
                 return
             self.state.visible_columns = selected
             self.state.current_page = 1
-            self.reload_table()
+            self.recarregar_tabela()
 
-    def prev_page(self) -> None:
+    def pagina_anterior(self) -> None:
         if self.state.current_page > 1:
             self.state.current_page -= 1
-            self.reload_table()
+            self.recarregar_tabela()
 
-    def next_page(self) -> None:
+    def proxima_pagina(self) -> None:
         total_pages = max(1, ((self.state.total_rows - 1) // self.state.page_size) + 1 if self.state.total_rows else 1)
         if self.state.current_page < total_pages:
             self.state.current_page += 1
-            self.reload_table()
+            self.recarregar_tabela()
 
-    def _save_dialog(self, title: str, pattern: str) -> Path | None:
+    def _dialogo_salvar(self, title: str, pattern: str) -> Path | None:
         filename, _ = QFileDialog.getSaveFileName(self, title, str(CONSULTAS_ROOT), pattern)
         return Path(filename) if filename else None
 
-    def _filters_text(self) -> str:
+    def _texto_filtros(self) -> str:
         return " | ".join(f"{f.column} {f.operator} {f.value}".strip() for f in self.state.filters or [])
 
-    def _dataset_for_export(self, mode: str) -> pl.DataFrame:
+    def _dataset_para_exportacao(self, mode: str) -> pl.DataFrame:
         if self.state.current_file is None:
             raise ValueError("Nenhum arquivo selecionado.")
         if mode == "full":
@@ -608,23 +608,23 @@ class MainWindow(QMainWindow):
             )
         raise ValueError(f"Modo de exportação não suportado: {mode}")
 
-    def export_excel(self, mode: str) -> None:
+    def exportar_excel(self, mode: str) -> None:
         try:
-            df = self._dataset_for_export(mode)
-            target = self._save_dialog("Salvar Excel", "Excel (*.xlsx)")
+            df = self._dataset_para_exportacao(mode)
+            target = self._dialogo_salvar("Salvar Excel", "Excel (*.xlsx)")
             if not target:
                 return
             self.export_service.export_excel(target, df, sheet_name=self.state.current_file.stem if self.state.current_file else "Dados")
-            self.show_info("Exportação concluída", f"Arquivo gerado em:\n{target}")
+            self.mostrar_info("Exportação concluída", f"Arquivo gerado em:\n{target}")
         except Exception as exc:
-            self.show_error("Falha na exportação para Excel", str(exc))
+            self.mostrar_erro("Falha na exportação para Excel", str(exc))
 
-    def export_docx(self) -> None:
+    def exportar_docx(self) -> None:
         try:
             if self.state.current_file is None:
                 raise ValueError("Nenhum arquivo selecionado.")
             df = self.parquet_service.load_dataset(self.state.current_file, self.state.filters or [], self.state.visible_columns or [])
-            target = self._save_dialog("Salvar relatório Word", "Word (*.docx)")
+            target = self._dialogo_salvar("Salvar relatório Word", "Word (*.docx)")
             if not target:
                 return
             self.export_service.export_docx(
@@ -633,14 +633,14 @@ class MainWindow(QMainWindow):
                 cnpj=self.state.current_cnpj or "",
                 table_name=self.state.current_file.name,
                 df=df,
-                filters_text=self._filters_text(),
+                filters_text=self._texto_filtros(),
                 visible_columns=self.state.visible_columns or [],
             )
-            self.show_info("Relatório gerado", f"Arquivo gerado em:\n{target}")
+            self.mostrar_info("Relatório gerado", f"Arquivo gerado em:\n{target}")
         except Exception as exc:
-            self.show_error("Falha na exportação para Word", str(exc))
+            self.mostrar_erro("Falha na exportação para Word", str(exc))
 
-    def export_txt_html(self) -> None:
+    def exportar_txt_html(self) -> None:
         try:
             if self.state.current_file is None:
                 raise ValueError("Nenhum arquivo selecionado.")
@@ -650,20 +650,20 @@ class MainWindow(QMainWindow):
                 cnpj=self.state.current_cnpj or "",
                 table_name=self.state.current_file.name,
                 df=df,
-                filters_text=self._filters_text(),
+                filters_text=self._texto_filtros(),
                 visible_columns=self.state.visible_columns or [],
             )
-            target = self._save_dialog("Salvar TXT com HTML", "TXT (*.txt)")
+            target = self._dialogo_salvar("Salvar TXT com HTML", "TXT (*.txt)")
             if not target:
                 return
             self.export_service.export_txt_with_html(target, html_report)
-            self.show_info("Relatório HTML/TXT gerado", f"Arquivo gerado em:\n{target}")
+            self.mostrar_info("Relatório HTML/TXT gerado", f"Arquivo gerado em:\n{target}")
         except Exception as exc:
-            self.show_error("Falha na exportação TXT/HTML", str(exc))
+            self.mostrar_erro("Falha na exportação TXT/HTML", str(exc))
 
-    def open_editable_aggregation_table(self) -> None:
+    def abrir_tabela_agregacao_editavel(self) -> None:
         if not self.state.current_cnpj:
-            self.show_error("CNPJ não selecionado", "Selecione um CNPJ na lista.")
+            self.mostrar_erro("CNPJ não selecionado", "Selecione um CNPJ na lista.")
             return
         try:
             cnpj_dir = self.parquet_service.cnpj_dir(self.state.current_cnpj)
@@ -673,19 +673,19 @@ class MainWindow(QMainWindow):
             self.aggregation_table_model.set_dataframe(df)
             self.aggregation_table_view.resizeColumnsToContents()
         except Exception as exc:
-            self.show_error("Falha ao abrir tabela editável", str(exc))
+            self.mostrar_erro("Falha ao abrir tabela editável", str(exc))
             return
 
         self.state.current_file = target
         self.state.current_page = 1
         self.state.filters = []
         # We don't necessarily want to load it in the Consulta tab here if the user is in Agregação
-        # self.load_current_file(reset_columns=True)
+        # self.carregar_arquivo_atual(reset_columns=True)
         self.tabs.setCurrentIndex(1)
 
-    def execute_aggregation(self) -> None:
+    def executar_agregacao(self) -> None:
         if not self.state.current_cnpj:
-            self.show_error("CNPJ não selecionado", "Selecione um CNPJ antes de agregar.")
+            self.mostrar_erro("CNPJ não selecionado", "Selecione um CNPJ antes de agregar.")
             return
 
         rows_top = self.aggregation_table_model.get_checked_rows()
@@ -701,7 +701,7 @@ class MainWindow(QMainWindow):
                 combined.append(r)
 
         if len(combined) < 2:
-            self.show_error("Seleção insuficiente", "Marque pelo menos duas linhas com 'Visto' (pode ser em ambas as tabelas) para agregar.")
+            self.mostrar_erro("Seleção insuficiente", "Marque pelo menos duas linhas com 'Visto' (pode ser em ambas as tabelas) para agregar.")
             return
 
         try:
@@ -728,16 +728,16 @@ class MainWindow(QMainWindow):
             # Clear checks and reload top table
             self.aggregation_table_model.clear_checked()
             self.results_table_model.clear_checked()
-            self.open_editable_aggregation_table()
+            self.abrir_tabela_agregacao_editavel()
             
-            self.show_info(
+            self.mostrar_info(
                 "Agregação concluída",
                 f"As {len(combined)} descrições foram unificadas em:\n'{result.aggregated_row['descricao']}'"
             )
         except Exception as exc:
-            self.show_error("Falha na agregação", str(exc))
+            self.mostrar_erro("Falha na agregação", str(exc))
 
-    def apply_quick_filters(self) -> None:
+    def aplicar_filtros_rapidos(self) -> None:
         idx = self.tabs.currentIndex()
         if idx == 0: # Consulta
             fields = {
@@ -790,27 +790,27 @@ class MainWindow(QMainWindow):
         self.state.current_page = 1
         
         if idx == 0:
-            self.reload_table()
+            self.recarregar_tabela()
         else:
             # For aggregation tab, we might want to just reload the file or filter in-memory.
             # But reload_table updates the main table. Let's make it work for aggregation too if it's the current file.
             # Actually, open_editable_aggregation_table reloads from disk.
             # Let's use the standard flow.
-            self.reload_table(update_main_view=(idx==0))
+            self.recarregar_tabela(update_main_view=(idx==0))
             if idx == 1:
                 # Update aggregation table with the filtered results
                 self.aggregation_table_model.set_dataframe(self.current_page_df_all)
                 self.aggregation_table_view.resizeColumnsToContents()
 
-    def refresh_logs(self) -> None:
+    def atualizar_logs(self) -> None:
         self.log_view.setPlainText("\n".join(self.aggregation_service.load_log_lines()))
 
-    def open_cnpj_folder(self) -> None:
+    def abrir_pasta_cnpj(self) -> None:
         if not self.state.current_cnpj:
-            self.show_error("CNPJ não selecionado", "Selecione um CNPJ para abrir a pasta.")
+            self.mostrar_erro("CNPJ não selecionado", "Selecione um CNPJ para abrir a pasta.")
             return
         target = self.parquet_service.cnpj_dir(self.state.current_cnpj)
         if not target.exists():
-            self.show_error("Pasta inexistente", f"A pasta {target} ainda não foi criada.")
+            self.mostrar_erro("Pasta inexistente", f"A pasta {target} ainda não foi criada.")
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
