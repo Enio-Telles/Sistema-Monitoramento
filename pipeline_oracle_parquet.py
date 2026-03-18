@@ -119,7 +119,7 @@ def extract_bind_names(sql: str) -> list[str]:
         low = name.lower()
         if low not in seen:
             seen.add(low)
-            ordered.append(name)
+            ordered.append(low)
     return ordered
 
 
