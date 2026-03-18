@@ -64,6 +64,7 @@ Sistema-Monitoramento/
     │           ├── tabela_produtos_editavel_<cnpj>.parquet
     │           ├── tabela_itens_auditados_<cnpj>.parquet
     │           ├── tabela_somas_anuais_<cnpj>.parquet   # NOVO: Somas por ano/operacao
+    │           ├── indice_produtos_<cnpj>.parquet        # NOVO: Índice de chaves únicas
     │           └── mapeamento_codigos_<cnpj>.parquet
     └── app_state/
         └── ...
@@ -116,6 +117,7 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 - **`lista_descricoes`**: Todas as variações de descrições originais que compõem este grupo.
 - **`lista_descricoes_normalizadas`**: Todas as descrições já normalizadas que foram unificadas.
 - **`descricao_padrao`**: Primeira descrição normalizada identificada para o grupo (usada para rastreabilidade de sistema).
+- **`lista_chaves_produto`**: Lista de IDs do índice (`chave_produto`) que compõem este grupo.
 - **`co_sefin_inferido`**: Código SEFIN inferido via hierarquia (NCM+CEST -> CEST -> NCM).
 - **`conflito_co_sefin`**: Flag booleana que indica se o grupo possui múltiplos códigos SEFIN inferidos diferentes entre seus membros.
 - **`verificado`**: Campo booleano (`true`/`false`) para controle de revisão manual pelo auditor.
@@ -123,7 +125,8 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 ### 5.2 Tabela de Itens Auditados (`tabela_itens_auditados_<cnpj>.parquet`)
 *Tabela detalhada no nível de item (não agregada) com todas as características originais e a inferência SEFIN.*
 
-- **`fonte`**: Origem (nfe, nfce, c170, bloco_h).
+- **`fonte`**: Origem (nfe, nfce, c170, bloco_h, fronteira).
+- **`chave_produto`**: ID único do índice de produtos (liga o item à `indice_produtos`).
 - **`codigo`**: Código original do produto.
 - **`descricao` / `descr_compl`**: Descrição e observações complementares.
 - **`tipo_item` / `ncm` / `cest` / `gtin` / `unid`**: Atributos técnicos originais.
@@ -140,7 +143,14 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 - **`qtd_total`**: Soma das quantidades movimentadas.
 - **`valor_total`**: Soma dos valores de produto.
 
-### 5.4 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
+### 5.4 Tabela de Índice de Produtos (`indice_produtos_<cnpj>.parquet`)
+*Índice técnico que mapeia a combinação de [codigo, descricao, descr_compl, tipo_item, ncm, cest, gtin] para um ID numérico único.*
+
+- **`chave_produto`**: ID sequencial único para o conjunto de atributos.
+- **`codigo` / `descricao` / `descr_compl` / ...**: Atributos que formam a chave.
+- **`lista_unidades`**: Unidades únicas encontradas para este produto.
+
+### 5.5 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
 *Tabela que contém as novas entradas para códigos que foram "separados" por possuírem descrições muito diferentes.*
 
 - **`codigo_desagregado`**: O novo código gerado (ex: `codigo_separado_01`).

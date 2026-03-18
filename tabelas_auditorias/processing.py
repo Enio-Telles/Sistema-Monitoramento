@@ -15,6 +15,12 @@ from .utils import (
     empty_with_schema,
     COSEFINClassifier
 )
+import sys
+import os
+
+# Adiciona o diretório raiz ao path para importar indice_produtos
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from indice_produtos import criar_indice_produtos
 
 def canonicalize_nfe_like(df: pd.DataFrame, fonte: str) -> pd.DataFrame:
     data_mov = pd.to_datetime(
@@ -248,6 +254,23 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     classifier = COSEFINClassifier(ref_dir)
     produtos["co_sefin_inferido"] = classifier.classify(produtos)
 
+    # Geração do Índice de Produtos e chave_produto
+    # O índice usa: codigo, descricao, descr_compl, tipo_item, ncm, cest, gtin
+    # Precisamos garantir que todos esses campos existam e sejam strings
+    for col in ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid"]:
+        if col not in produtos.columns:
+            produtos[col] = pd.Series([None] * len(produtos), dtype="string")
+        else:
+            produtos[col] = produtos[col].astype("string").str.strip()
+
+    indice_df = criar_indice_produtos(produtos)
+    # Merge da chave_produto de volta para a tabela de produtos base
+    produtos = produtos.merge(
+        indice_df.drop(columns=["lista_unidades"]),
+        on=["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin"],
+        how="left"
+    )
+
     produtos = produtos[produtos["descricao_normalizada"].notna()].copy()
 
     codigo_stats = (
@@ -311,6 +334,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             lista_co_sefin=("co_sefin_inferido", unique_sorted),
             qtd_codigos=("codigo_lista_fmt", "nunique"),
             descricao_padrao=("descricao_padrao", "first"),
+            lista_chaves_produto=("chave_produto", unique_sorted),
         )
         .reset_index()
     )
@@ -348,6 +372,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             "lista_descricoes",
             "lista_descricoes_normalizadas",
             "descricao_padrao",
+            "lista_chaves_produto",
         ]
     ].sort_values(["descricao_normalizada", "descricao"], kind="stable")
     tabela_descricoes_unificadas["verificado"] = False
@@ -387,6 +412,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
                 co_sefin_inferido=("co_sefin_inferido", unique_sorted),
                 qtd_codigos=("codigo_desagregado", "nunique"),
                 descricao_padrao=("descricao", "first"),
+                lista_chaves_produto=("chave_produto", unique_sorted),
             )
             .reset_index()
         )
@@ -402,6 +428,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
                 "lista_unid",
                 "co_sefin_inferido",
                 "descricao_padrao",
+                "lista_chaves_produto",
             ]
         ].sort_values(["codigo_desagregado"], kind="stable")
 
@@ -482,11 +509,13 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     path_final = produtos_dir / f"tabela_produtos_{cnpj}.parquet"
     path_itens = produtos_dir / f"tabela_itens_auditados_{cnpj}.parquet"
     path_somas = produtos_dir / f"tabela_somas_anuais_{cnpj}.parquet"
+    path_indice = produtos_dir / f"indice_produtos_{cnpj}.parquet"
 
     tabela_descricoes_unificadas.to_parquet(path_unif, index=False)
     codigos_desagregados.to_parquet(path_desag, index=False)
     tabela_final.to_parquet(path_final, index=False)
     mapeamento.to_parquet(produtos_dir / f"mapeamento_codigos_{cnpj}.parquet", index=False)
+    indice_df.to_parquet(path_indice, index=False)
 
     # Gerar e salvar somas anuais
     tabela_somas = gerar_somas_anuais(produtos)
@@ -494,7 +523,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
 
     # Tabela detalhada de itens com todas as características solicitadas
     column_order_itens = [
-        "fonte", "codigo", "descricao", "descr_compl", "tipo_item", 
+        "fonte", "chave_produto", "codigo", "descricao", "descr_compl", "tipo_item", 
         "ncm", "cest", "gtin", "unid", "data_mov", 
         "descricao_normalizada", "co_sefin_inferido"
     ]
@@ -508,4 +537,5 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         "tabela_itens": path_itens,
         "tabela_somas": path_somas,
         "mapeamento_codigos": produtos_dir / f"mapeamento_codigos_{cnpj}.parquet",
+        "indice_produtos": path_indice,
     }
