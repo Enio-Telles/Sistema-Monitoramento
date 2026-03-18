@@ -144,6 +144,10 @@ def alinhar_nomenclatura_documento(df: pd.DataFrame) -> pd.DataFrame:
         "gtin_padrao": "GTIN_padrao",
     }
     df = df.rename(columns=rename_map)
+    
+    # Identifica colunas dinâmicas de valores anuais
+    vlr_cols = sorted([c for c in df.columns if c.startswith("Vlr_")])
+
     ordered_cols = [
         "descrição_normalizada",
         "descricao",
@@ -159,16 +163,27 @@ def alinhar_nomenclatura_documento(df: pd.DataFrame) -> pd.DataFrame:
         "NCM_padrao",
         "CEST_padrao",
         "GTIN_padrao",
+    ]
+    
+    # Insere as colunas de valor no meio
+    ordered_cols.extend(vlr_cols)
+    
+    # Demais colunas técnicas e de rastreabilidade
+    ordered_cols.extend([
         "lista_fontes",
         "lista_descricoes",
         "lista_descricoes_normalizadas",
         "descricao_padrao",
+        "lista_chaves_produto",
         "co_sefin_inferido",
         "conflito_co_sefin",
         "verificado",
-    ]
+    ])
+    
     existing = [c for c in ordered_cols if c in df.columns]
-    return df[existing].copy()
+    # Garante que não perdemos nenhuma coluna caso o esquema mude
+    remaining = [c for c in df.columns if c not in existing]
+    return df[existing + remaining].copy()
 
 
 def build_produtos_base(pasta_cnpj: Path, cnpj: str) -> pd.DataFrame:
