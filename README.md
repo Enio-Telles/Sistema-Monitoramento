@@ -31,6 +31,8 @@ A aplicação foi separada em quatro camadas:
 Sistema-Monitoramento/
 ├── app.py
 ├── pipeline_oracle_parquet.py
+├── merge_pdfs.py                # NOVO: Utilitário para união de PDFs
+├── indice_produtos.py           # NOVO: Indexação e consolidação de atributos
 ├── requirements.txt
 ├── .gitignore
 ├── README.md
@@ -39,10 +41,15 @@ Sistema-Monitoramento/
 │   ├── NFCe.sql
 │   ├── bloco_h.sql
 │   └── ...
-├── tabelas_auditorias/            # NOVO: Lógica modularizada
+├── tabelas_auditorias/            # Lógica modularizada
 │   ├── constants.py
-│   ├── utils.py
-│   └── processing.py
+│   ├── utils.py                 # Inclui Classificador CO_SEFIN
+│   └── processing.py            # Motor de consolidação
+├── referencias/                   # Tabelas de referência (Parquet)
+│   ├── CO_SEFIN/                # Bases para inferência SEFIN
+│   ├── NCM/
+│   ├── CEST/
+│   └── ...
 ├── fiscal_app/
 │   ├── ...
 └── workspace/
@@ -75,6 +82,8 @@ Sistema-Monitoramento/
 - `fiscal_app/services/aggregation_service.py`: cria e atualiza as tabelas editáveis.
 - `fiscal_app/services/registry_service.py`: persistência local dos CNPJs consultados.
 - `fiscal_app/services/pipeline_service.py`: dispara o pipeline Oracle a partir da interface.
+- `merge_pdfs.py`: utilitário de linha de comando para unir múltiplos arquivos PDF em um único documento.
+- `indice_produtos.py`: utilitário para criar um índice único de produtos baseado em atributos consolidados.
 
 ---
 
@@ -105,6 +114,8 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 - **`lista_descricoes`**: Todas as variações de descrições originais que compõem este grupo.
 - **`lista_descricoes_normalizadas`**: Todas as descrições já normalizadas que foram unificadas.
 - **`descricao_padrao`**: Primeira descrição normalizada identificada para o grupo (usada para rastreabilidade de sistema).
+- **`co_sefin_inferido`**: Código SEFIN inferido via hierarquia (NCM+CEST -> CEST -> NCM).
+- **`conflito_co_sefin`**: Flag booleana que indica se o grupo possui múltiplos códigos SEFIN inferidos diferentes entre seus membros.
 - **`verificado`**: Campo booleano (`true`/`false`) para controle de revisão manual pelo auditor.
 
 ### 5.2 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
@@ -269,6 +280,7 @@ Ao agregar linhas selecionadas:
 - `lista_codigos` = união dos códigos selecionados;
 - `lista_tipo_item`, `lista_ncm`, `lista_cest`, `lista_gtin`, `lista_unid` = união distinta dos valores;
 - `tipo_item_padrao`, `NCM_padrao`, `CEST_padrao`, `GTIN_padrao` = moda entre as linhas, ignorando vazios;
+- `co_sefin_padrao` (ou `co_sefin_inferido` na tabela final) = moda dos códigos SEFIN inferidos;
 - `verificado` = `false` após a alteração, para indicar que a linha foi recriada.
 
 ### Rastreamento
@@ -339,6 +351,11 @@ python app.py
 5. exporte para Excel, Word ou TXT/HTML;
 6. para agregação, abra a tabela desagregada, filtre por descrição, selecione linhas e envie para a aba **Agregação**;
 7. gere a tabela `_2`.
+
+### 13.5 Unir PDFs
+```bash
+python merge_pdfs.py pasta_com_pdfs -o documento_final.pdf
+```
 
 ---
 
