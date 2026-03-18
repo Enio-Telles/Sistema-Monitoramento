@@ -126,6 +126,8 @@ def alinhar_nomenclatura_documento(df: pd.DataFrame) -> pd.DataFrame:
         "lista_descricoes",
         "lista_descricoes_normalizadas",
         "descricao_padrao",
+        "co_sefin_inferido",
+        "conflito_co_sefin",
         "verificado",
     ]
     existing = [c for c in ordered_cols if c in df.columns]
@@ -298,6 +300,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         ]
     ].sort_values(["descricao_normalizada", "descricao"], kind="stable")
     tabela_descricoes_unificadas["verificado"] = False
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.rename(columns={"co_sefin_padrao": "co_sefin_inferido"})
     tabela_descricoes_unificadas = alinhar_nomenclatura_documento(tabela_descricoes_unificadas)
 
     codigos_ambiguos = set(codigo_stats.loc[codigo_stats["qtd_descricoes_diferentes"] > 1, "codigo"].astype(str))
@@ -422,19 +425,30 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         "codigo_original", "codigo_final", "descricao_final", "situacao", "detalhe"
     ]].sort_values(["situacao", "codigo_original"], kind="stable")
 
+    # Exportação final
     path_unif = produtos_dir / f"tabela_descricoes_unificadas_{cnpj}.parquet"
     path_desag = produtos_dir / f"codigos_desagregados_{cnpj}.parquet"
     path_final = produtos_dir / f"tabela_produtos_{cnpj}.parquet"
-    path_mapa = produtos_dir / f"mapeamento_codigos_{cnpj}.parquet"
+    path_itens = produtos_dir / f"tabela_itens_auditados_{cnpj}.parquet"
 
     tabela_descricoes_unificadas.to_parquet(path_unif, index=False)
     codigos_desagregados.to_parquet(path_desag, index=False)
     tabela_final.to_parquet(path_final, index=False)
-    mapeamento_resumido.to_parquet(path_mapa, index=False)
+    mapeamento.to_parquet(produtos_dir / f"mapeamento_codigos_{cnpj}.parquet", index=False)
+
+    # Tabela detalhada de itens com todas as características solicitadas
+    column_order_itens = [
+        "fonte", "codigo", "descricao", "descr_compl", "tipo_item", 
+        "ncm", "cest", "gtin", "unid", "data_mov", 
+        "descricao_normalizada", "co_sefin_inferido"
+    ]
+    cols_to_save = [c for c in column_order_itens if c in produtos.columns]
+    produtos[cols_to_save].to_parquet(path_itens, index=False)
 
     return {
         "tabela_descricoes_unificadas": path_unif,
         "codigos_desagregados": path_desag,
         "tabela_produtos": path_final,
-        "mapeamento_codigos": path_mapa,
+        "tabela_itens": path_itens,
+        "mapeamento_codigos": produtos_dir / f"mapeamento_codigos_{cnpj}.parquet",
     }

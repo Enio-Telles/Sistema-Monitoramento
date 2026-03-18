@@ -62,6 +62,7 @@ Sistema-Monitoramento/
     │           ├── codigos_desagregados_<cnpj>.parquet
     │           ├── tabela_produtos_<cnpj>.parquet
     │           ├── tabela_produtos_editavel_<cnpj>.parquet
+    │           ├── tabela_itens_auditados_<cnpj>.parquet # NOVO: Detalhe por item
     │           └── mapeamento_codigos_<cnpj>.parquet
     └── app_state/
         └── ...
@@ -118,7 +119,18 @@ Abaixo estão as descrições dos campos encontrados nas tabelas geradas pelo si
 - **`conflito_co_sefin`**: Flag booleana que indica se o grupo possui múltiplos códigos SEFIN inferidos diferentes entre seus membros.
 - **`verificado`**: Campo booleano (`true`/`false`) para controle de revisão manual pelo auditor.
 
-### 5.2 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
+### 5.2 Tabela de Itens Auditados (`tabela_itens_auditados_<cnpj>.parquet`)
+*Tabela detalhada no nível de item (não agregada) com todas as características originais e a inferência SEFIN.*
+
+- **`fonte`**: Origem (nfe, nfce, c170, bloco_h).
+- **`codigo`**: Código original do produto.
+- **`descricao` / `descr_compl`**: Descrição e observações complementares.
+- **`tipo_item` / `ncm` / `cest` / `gtin` / `unid`**: Atributos técnicos originais.
+- **`data_mov`**: Data de emissão ou inventário.
+- **`descricao_normalizada`**: Chave de limpeza usada para agrupamento.
+- **`co_sefin_inferido`**: Código SEFIN atribuído individualmente a este item.
+
+### 5.3 Tabela de Códigos Segregados (`codigos_desagregados_<cnpj>.parquet`)
 *Tabela que contém as novas entradas para códigos que foram "separados" por possuírem descrições muito diferentes.*
 
 - **`codigo_desagregado`**: O novo código gerado (ex: `codigo_separado_01`).
