@@ -1,6 +1,24 @@
 STOPWORDS = {
-    "A", "AS", "O", "OS", "DE", "DA", "DO", "DAS", "DOS", "COM", "PARA", "POR",
-    "E", "EM", "NA", "NO", "NAS", "NOS", "UM", "UMA",
+    "A",
+    "AS",
+    "O",
+    "OS",
+    "DE",
+    "DA",
+    "DO",
+    "DAS",
+    "DOS",
+    "COM",
+    "PARA",
+    "POR",
+    "E",
+    "EM",
+    "NA",
+    "NO",
+    "NAS",
+    "NOS",
+    "UM",
+    "UMA",
 }
 
 UNIT_SYNONYMS = {

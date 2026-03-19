@@ -65,15 +65,17 @@ class PolarsTableModel(QAbstractTableModel):
             row = index.row()
             # Handle both enum values and integers
             if isinstance(value, Qt.CheckState):
-                is_checked = (value == Qt.CheckState.Checked)
+                is_checked = value == Qt.CheckState.Checked
             else:
-                is_checked = (value == Qt.Checked or value == 2) # 2 is usually Qt.Checked
-                
+                is_checked = (
+                    value == Qt.Checked or value == 2
+                )  # 2 is usually Qt.Checked
+
             if is_checked:
                 self._checked_rows.add(row)
             else:
                 self._checked_rows.discard(row)
-            
+
             self.dataChanged.emit(index, index, [Qt.CheckStateRole])
             return True
         return False
@@ -85,7 +87,9 @@ class PolarsTableModel(QAbstractTableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
         return f
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole) -> Any:
+    def headerData(
+        self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole
+    ) -> Any:
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal:

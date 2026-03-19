@@ -13,7 +13,7 @@ from .utils import (
     codigo_num_sort,
     unique_sorted,
     empty_with_schema,
-    COSEFINClassifier
+    COSEFINClassifier,
 )
 import sys
 import os
@@ -22,26 +22,52 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from indice_produtos import criar_indice_produtos
 
+
 def canonicalize_nfe_like(df: pd.DataFrame, fonte: str) -> pd.DataFrame:
     data_mov = pd.to_datetime(
-        coalesce_columns_ci(df, ["dhemi", "dh_emi", "dh_emi_utc", "emi_dh", "data_emissao"]),
+        coalesce_columns_ci(
+            df, ["dhemi", "dh_emi", "dh_emi_utc", "emi_dh", "data_emissao"]
+        ),
         errors="coerce",
     )
 
     return pd.DataFrame(
         {
             "fonte": fonte,
-            "codigo": coalesce_columns_ci(df, ["prod_cprod", "cod_item", "codigo_produto"]).astype("string"),
-            "descricao": coalesce_columns_ci(df, ["prod_xprod", "descr_item", "descricao_produto"]).astype("string"),
+            "codigo": coalesce_columns_ci(
+                df, ["prod_cprod", "cod_item", "codigo_produto"]
+            ).astype("string"),
+            "descricao": coalesce_columns_ci(
+                df, ["prod_xprod", "descr_item", "descricao_produto"]
+            ).astype("string"),
             "descr_compl": pd.Series([None] * len(df), index=df.index, dtype="string"),
             "tipo_item": pd.Series([None] * len(df), index=df.index, dtype="string"),
-            "ncm": coalesce_columns_ci(df, ["prod_ncm", "cod_ncm", "ncm"]).astype("string"),
+            "ncm": coalesce_columns_ci(df, ["prod_ncm", "cod_ncm", "ncm"]).astype(
+                "string"
+            ),
             "cest": coalesce_columns_ci(df, ["prod_cest", "cest"]).astype("string"),
-            "gtin": coalesce_columns_ci(df, ["prod_cean", "prod_ceantrib", "prod_cbarra", "prod_ean", "prod_eantrib"]).astype("string"),
-            "unid": coalesce_columns_ci(df, ["prod_ucom", "prod_utrib", "unid"]).astype("string"),
-            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao"]).astype("string"),
-            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["prod_qcom", "qtd"]), errors="coerce").fillna(0),
-            "valor": pd.to_numeric(coalesce_columns_ci(df, ["prod_vprod", "vl_item"]), errors="coerce").fillna(0),
+            "gtin": coalesce_columns_ci(
+                df,
+                [
+                    "prod_cean",
+                    "prod_ceantrib",
+                    "prod_cbarra",
+                    "prod_ean",
+                    "prod_eantrib",
+                ],
+            ).astype("string"),
+            "unid": coalesce_columns_ci(df, ["prod_ucom", "prod_utrib", "unid"]).astype(
+                "string"
+            ),
+            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao"]).astype(
+                "string"
+            ),
+            "qtd": pd.to_numeric(
+                coalesce_columns_ci(df, ["prod_qcom", "qtd"]), errors="coerce"
+            ).fillna(0),
+            "valor": pd.to_numeric(
+                coalesce_columns_ci(df, ["prod_vprod", "vl_item"]), errors="coerce"
+            ).fillna(0),
             "data_mov": data_mov,
         }
     )
@@ -60,11 +86,21 @@ def canonicalize_c170(df: pd.DataFrame) -> pd.DataFrame:
             "cest": coalesce_columns_ci(df, ["cest"]).astype("string"),
             "gtin": coalesce_columns_ci(df, ["cod_barra"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["unid"]).astype("string"),
-            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao", "ind_oper"]).map(
-                lambda x: "0 - ENTRADA" if str(x) in ("0", "ENTRADA") else ("1 - SAIDA" if str(x) in ("1", "SAIDA") else "0 - ENTRADA")
-            ).astype("string"),
-            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["qtd"]), errors="coerce").fillna(0),
-            "valor": pd.to_numeric(coalesce_columns_ci(df, ["vl_item"]), errors="coerce").fillna(0),
+            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao", "ind_oper"])
+            .map(
+                lambda x: (
+                    "0 - ENTRADA"
+                    if str(x) in ("0", "ENTRADA")
+                    else ("1 - SAIDA" if str(x) in ("1", "SAIDA") else "0 - ENTRADA")
+                )
+            )
+            .astype("string"),
+            "qtd": pd.to_numeric(
+                coalesce_columns_ci(df, ["qtd"]), errors="coerce"
+            ).fillna(0),
+            "valor": pd.to_numeric(
+                coalesce_columns_ci(df, ["vl_item"]), errors="coerce"
+            ).fillna(0),
             "data_mov": data_mov,
         }
     )
@@ -76,19 +112,30 @@ def canonicalize_bloco_h(df: pd.DataFrame) -> pd.DataFrame:
         {
             "fonte": "bloco_h",
             "codigo": coalesce_columns_ci(df, ["codigo_produto"]).astype("string"),
-            "descricao": coalesce_columns_ci(df, ["descricao_produto"]).astype("string"),
-            "descr_compl": coalesce_columns_ci(df, ["obs_complementar"]).astype("string"),
+            "descricao": coalesce_columns_ci(df, ["descricao_produto"]).astype(
+                "string"
+            ),
+            "descr_compl": coalesce_columns_ci(df, ["obs_complementar"]).astype(
+                "string"
+            ),
             "tipo_item": coalesce_columns_ci(df, ["tipo_item"]).astype("string"),
             "ncm": coalesce_columns_ci(df, ["cod_ncm"]).astype("string"),
             "cest": coalesce_columns_ci(df, ["cest"]).astype("string"),
             "gtin": coalesce_columns_ci(df, ["cod_barra"]).astype("string"),
             "unid": coalesce_columns_ci(df, ["unidade_medida"]).astype("string"),
-            "tipo_operacao": pd.Series(["2 - INVENTARIO"] * len(df), index=df.index, dtype="string"),
-            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["quantidade"]), errors="coerce").fillna(0),
-            "valor": pd.to_numeric(coalesce_columns_ci(df, ["valor_item"]), errors="coerce").fillna(0),
+            "tipo_operacao": pd.Series(
+                ["2 - INVENTARIO"] * len(df), index=df.index, dtype="string"
+            ),
+            "qtd": pd.to_numeric(
+                coalesce_columns_ci(df, ["quantidade"]), errors="coerce"
+            ).fillna(0),
+            "valor": pd.to_numeric(
+                coalesce_columns_ci(df, ["valor_item"]), errors="coerce"
+            ).fillna(0),
             "data_mov": data_mov,
         }
     )
+
 
 def canonicalize_fronteira(df: pd.DataFrame) -> pd.DataFrame:
     data_mov = pd.to_datetime(coalesce_columns_ci(df, ["dhemi"]), errors="coerce")
@@ -103,17 +150,27 @@ def canonicalize_fronteira(df: pd.DataFrame) -> pd.DataFrame:
             "cest": coalesce_columns_ci(df, ["cest"]).astype("string"),
             "gtin": pd.Series([None] * len(df), index=df.index, dtype="string"),
             "unid": pd.Series([None] * len(df), index=df.index, dtype="string"),
-            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao"]).astype("string"),
-            "qtd": pd.to_numeric(coalesce_columns_ci(df, ["qtd_comercial"]), errors="coerce").fillna(0),
-            "valor": pd.to_numeric(coalesce_columns_ci(df, ["valor_produto"]), errors="coerce").fillna(0),
+            "tipo_operacao": coalesce_columns_ci(df, ["tipo_operacao"]).astype(
+                "string"
+            ),
+            "qtd": pd.to_numeric(
+                coalesce_columns_ci(df, ["qtd_comercial"]), errors="coerce"
+            ).fillna(0),
+            "valor": pd.to_numeric(
+                coalesce_columns_ci(df, ["valor_produto"]), errors="coerce"
+            ).fillna(0),
             "data_mov": data_mov,
         }
     )
 
 
-def pick_mode_by_group(df: pd.DataFrame, group_col: str, value_col: str, alias: str) -> pd.DataFrame:
+def pick_mode_by_group(
+    df: pd.DataFrame, group_col: str, value_col: str, alias: str
+) -> pd.DataFrame:
     base = df[[group_col, value_col, "data_mov"]].copy()
-    base = base[base[value_col].notna() & (base[value_col].astype(str).str.strip() != "")]
+    base = base[
+        base[value_col].notna() & (base[value_col].astype(str).str.strip() != "")
+    ]
     if base.empty:
         return pd.DataFrame(columns=[group_col, alias])
 
@@ -144,7 +201,7 @@ def alinhar_nomenclatura_documento(df: pd.DataFrame) -> pd.DataFrame:
         "gtin_padrao": "GTIN_padrao",
     }
     df = df.rename(columns=rename_map)
-    
+
     # Identifica colunas dinâmicas de valores anuais e estoques
     vlr_cols = sorted([c for c in df.columns if c.startswith(("Valores_", "Estoque_"))])
 
@@ -164,22 +221,24 @@ def alinhar_nomenclatura_documento(df: pd.DataFrame) -> pd.DataFrame:
         "CEST_padrao",
         "GTIN_padrao",
     ]
-    
+
     # Insere as colunas de valor no meio
     ordered_cols.extend(vlr_cols)
-    
+
     # Demais colunas técnicas e de rastreabilidade
-    ordered_cols.extend([
-        "lista_fontes",
-        "lista_descricoes",
-        "lista_descricoes_normalizadas",
-        "descricao_padrao",
-        "lista_chaves_produto",
-        "co_sefin_inferido",
-        "conflito_co_sefin",
-        "verificado",
-    ])
-    
+    ordered_cols.extend(
+        [
+            "lista_fontes",
+            "lista_descricoes",
+            "lista_descricoes_normalizadas",
+            "descricao_padrao",
+            "lista_chaves_produto",
+            "co_sefin_inferido",
+            "conflito_co_sefin",
+            "verificado",
+        ]
+    )
+
     existing = [c for c in ordered_cols if c in df.columns]
     # Garante que não perdemos nenhuma coluna caso o esquema mude
     remaining = [c for c in df.columns if c not in existing]
@@ -207,10 +266,36 @@ def build_produtos_base(pasta_cnpj: Path, cnpj: str) -> pd.DataFrame:
         frames.append(canonicalize_fronteira(fronteira))
 
     if not frames:
-        return pd.DataFrame(columns=["fonte", "codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid", "tipo_operacao", "qtd", "valor", "data_mov"])
+        return pd.DataFrame(
+            columns=[
+                "fonte",
+                "codigo",
+                "descricao",
+                "descr_compl",
+                "tipo_item",
+                "ncm",
+                "cest",
+                "gtin",
+                "unid",
+                "tipo_operacao",
+                "qtd",
+                "valor",
+                "data_mov",
+            ]
+        )
 
     produtos = pd.concat(frames, ignore_index=True)
-    for col in ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid", "tipo_operacao"]:
+    for col in [
+        "codigo",
+        "descricao",
+        "descr_compl",
+        "tipo_item",
+        "ncm",
+        "cest",
+        "gtin",
+        "unid",
+        "tipo_operacao",
+    ]:
         produtos[col] = produtos[col].astype("string").str.strip()
     return produtos
 
@@ -223,33 +308,40 @@ def gerar_somas_anuais(produtos: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFra
     df["ano"] = df["data_mov"].dt.year
     df = df[df["ano"].notna()].copy()
     df["ano"] = df["ano"].astype(int)
-    
+
     somas = (
         df.groupby(["descricao_normalizada", "ano", "tipo_operacao"], dropna=False)
-        .agg(
-            qtd_total=("qtd", "sum"),
-            valor_total=("valor", "sum")
-        )
+        .agg(qtd_total=("qtd", "sum"), valor_total=("valor", "sum"))
         .reset_index()
     )
-    
+
     # Pivotagem para colunas individuais com nomes solicitados
-    def get_col_name(row):
-        tp = str(row["tipo_operacao"]).upper()
-        ano = str(row["ano"])
-        if "ENTRADA" in tp: return f"Valores_Entradas_{ano}"
-        if "SAIDA" in tp: return f"Valores_Saidas_{ano}"
-        if "INVENTARIO" in tp: return f"Estoque_final_{ano}"
-        return f"Outros_{ano}"
+    import numpy as np
 
     df_pivot = somas.copy()
-    df_pivot["col_name"] = df_pivot.apply(get_col_name, axis=1)
-    
+
+    tp = df_pivot["tipo_operacao"].astype(str).str.upper()
+    ano = df_pivot["ano"].astype(str)
+
+    df_pivot["col_name"] = np.select(
+        [
+            tp.str.contains("ENTRADA"),
+            tp.str.contains("SAIDA"),
+            tp.str.contains("INVENTARIO"),
+        ],
+        ["Valores_Entradas_" + ano, "Valores_Saidas_" + ano, "Estoque_final_" + ano],
+        default="Outros_" + ano,
+    )
+
     # Pivotamos os valores totais
-    pivoted = df_pivot.pivot(index="descricao_normalizada", columns="col_name", values="valor_total").fillna(0)
+    pivoted = df_pivot.pivot(
+        index="descricao_normalizada", columns="col_name", values="valor_total"
+    ).fillna(0)
     pivoted = pivoted.reset_index()
 
-    return somas.sort_values(["descricao_normalizada", "ano", "tipo_operacao"], kind="stable"), pivoted
+    return somas.sort_values(
+        ["descricao_normalizada", "ano", "tipo_operacao"], kind="stable"
+    ), pivoted
 
 
 def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, Path]:
@@ -270,12 +362,30 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             "tabela_produtos": path_final,
         }
 
-    produtos = produtos[produtos["codigo"].notna() & produtos["descricao"].notna()].copy()
-    produtos["descricao_normalizada"] = produtos["descricao"].map(normalizar_texto).astype("string")
-    produtos["unid_padronizada"] = produtos["unid"].map(normalizar_unidade).astype("string")
-    produtos["gtin_limpo"] = produtos["gtin"].map(lambda x: somente_digitos(x) if gtin_valido(x) else None).astype("string")
-    produtos["ncm_limpo"] = produtos["ncm"].map(lambda x: somente_digitos(x) if ncm_valido(x) else None).astype("string")
-    produtos["cest_limpo"] = produtos["cest"].map(lambda x: somente_digitos(x) if cest_valido(x) else None).astype("string")
+    produtos = produtos[
+        produtos["codigo"].notna() & produtos["descricao"].notna()
+    ].copy()
+    produtos["descricao_normalizada"] = (
+        produtos["descricao"].map(normalizar_texto).astype("string")
+    )
+    produtos["unid_padronizada"] = (
+        produtos["unid"].map(normalizar_unidade).astype("string")
+    )
+    produtos["gtin_limpo"] = (
+        produtos["gtin"]
+        .map(lambda x: somente_digitos(x) if gtin_valido(x) else None)
+        .astype("string")
+    )
+    produtos["ncm_limpo"] = (
+        produtos["ncm"]
+        .map(lambda x: somente_digitos(x) if ncm_valido(x) else None)
+        .astype("string")
+    )
+    produtos["cest_limpo"] = (
+        produtos["cest"]
+        .map(lambda x: somente_digitos(x) if cest_valido(x) else None)
+        .astype("string")
+    )
     produtos["codigo_num_sort"] = produtos["codigo"].map(codigo_num_sort)
     produtos["score_integridade"] = (
         produtos["tipo_item"].notna().astype(int) * 4
@@ -292,7 +402,16 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     # Geração do Índice de Produtos e chave_produto
     # O índice usa: codigo, descricao, descr_compl, tipo_item, ncm, cest, gtin
     # Precisamos garantir que todos esses campos existam e sejam strings
-    for col in ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid"]:
+    for col in [
+        "codigo",
+        "descricao",
+        "descr_compl",
+        "tipo_item",
+        "ncm",
+        "cest",
+        "gtin",
+        "unid",
+    ]:
         if col not in produtos.columns:
             produtos[col] = pd.Series([None] * len(produtos), dtype="string")
         else:
@@ -303,7 +422,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     produtos = produtos.merge(
         indice_df.drop(columns=["lista_unidades"]),
         on=["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin"],
-        how="left"
+        how="left",
     )
 
     produtos = produtos[produtos["descricao_normalizada"].notna()].copy()
@@ -316,7 +435,9 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
 
     produtos = produtos.merge(codigo_stats, on="codigo", how="left")
     produtos["codigo_lista_fmt"] = produtos.apply(
-        lambda row: format_codigo_lista(str(row["codigo"]), int(row["qtd_descricoes_diferentes"])),
+        lambda row: format_codigo_lista(
+            str(row["codigo"]), int(row["qtd_descricoes_diferentes"])
+        ),
         axis=1,
     )
 
@@ -342,16 +463,30 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         ascending=[True, False, False, False, True, True],
         kind="stable",
     )
-    codigo_padrao = candidatos.drop_duplicates(subset=["descricao_normalizada"], keep="first")[["descricao_normalizada", "codigo"]]
+    codigo_padrao = candidatos.drop_duplicates(
+        subset=["descricao_normalizada"], keep="first"
+    )[["descricao_normalizada", "codigo"]]
     codigo_padrao = codigo_padrao.rename(columns={"codigo": "codigo_padrao"})
 
-    descricao_representativa = pick_mode_by_group(produtos, "descricao_normalizada", "descricao", "descricao")
-    tipo_item_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "tipo_item", "tipo_item_padrao")
-    ncm_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "ncm_limpo", "ncm_padrao")
-    cest_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "cest_limpo", "cest_padrao")
-    gtin_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "gtin_limpo", "gtin_padrao")
+    descricao_representativa = pick_mode_by_group(
+        produtos, "descricao_normalizada", "descricao", "descricao"
+    )
+    tipo_item_padrao = pick_mode_by_group(
+        produtos, "descricao_normalizada", "tipo_item", "tipo_item_padrao"
+    )
+    ncm_padrao = pick_mode_by_group(
+        produtos, "descricao_normalizada", "ncm_limpo", "ncm_padrao"
+    )
+    cest_padrao = pick_mode_by_group(
+        produtos, "descricao_normalizada", "cest_limpo", "cest_padrao"
+    )
+    gtin_padrao = pick_mode_by_group(
+        produtos, "descricao_normalizada", "gtin_limpo", "gtin_padrao"
+    )
 
-    produtos["lista_descricoes"] = produtos["descricao"].apply(lambda x: [x] if x else [])
+    produtos["lista_descricoes"] = produtos["descricao"].apply(
+        lambda x: [x] if x else []
+    )
     produtos["descricao_padrao"] = produtos["descricao_normalizada"]
 
     tabela_descricoes_unificadas = (
@@ -364,8 +499,14 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             lista_gtin=("gtin_limpo", unique_sorted),
             lista_unid=("unid_padronizada", unique_sorted),
             lista_fontes=("fonte", unique_sorted),
-            lista_descricoes=("lista_descricoes", lambda x: sorted(set(y for l in x for y in l))),
-            lista_descricoes_normalizadas=("descricao_normalizada", lambda x: sorted(set(x))),
+            lista_descricoes=(
+                "lista_descricoes",
+                lambda x: sorted(set(y for lst in x for y in lst)),
+            ),
+            lista_descricoes_normalizadas=(
+                "descricao_normalizada",
+                lambda x: sorted(set(x)),
+            ),
             lista_co_sefin=("co_sefin_inferido", unique_sorted),
             qtd_codigos=("codigo_lista_fmt", "nunique"),
             descricao_padrao=("descricao_padrao", "first"),
@@ -375,15 +516,27 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     )
 
     # Identificação de conflitos de CO_SEFIN
-    tabela_descricoes_unificadas["conflito_co_sefin"] = tabela_descricoes_unificadas["lista_co_sefin"].apply(lambda l: len(l) > 1)
+    tabela_descricoes_unificadas["conflito_co_sefin"] = tabela_descricoes_unificadas[
+        "lista_co_sefin"
+    ].apply(lambda lst: len(lst) > 1)
     # Define o co_sefin_padrao como o mais frequente no grupo ou o primeiro da lista
-    co_sefin_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "co_sefin_inferido", "co_sefin_padrao")
-    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(co_sefin_padrao, on="descricao_normalizada", how="left")
+    co_sefin_padrao = pick_mode_by_group(
+        produtos, "descricao_normalizada", "co_sefin_inferido", "co_sefin_padrao"
+    )
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(
+        co_sefin_padrao, on="descricao_normalizada", how="left"
+    )
 
-    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(descricao_representativa, on="descricao_normalizada", how="left")
-    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(codigo_padrao, on="descricao_normalizada", how="left")
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(
+        descricao_representativa, on="descricao_normalizada", how="left"
+    )
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(
+        codigo_padrao, on="descricao_normalizada", how="left"
+    )
     for extra in [tipo_item_padrao, ncm_padrao, cest_padrao, gtin_padrao]:
-        tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(extra, on="descricao_normalizada", how="left")
+        tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(
+            extra, on="descricao_normalizada", how="left"
+        )
 
     tabela_descricoes_unificadas = tabela_descricoes_unificadas[
         [
@@ -411,28 +564,55 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         ]
     ].sort_values(["descricao_normalizada", "descricao"], kind="stable")
     tabela_descricoes_unificadas["verificado"] = False
-    tabela_descricoes_unificadas = tabela_descricoes_unificadas.rename(columns={"co_sefin_padrao": "co_sefin_inferido"})
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.rename(
+        columns={"co_sefin_padrao": "co_sefin_inferido"}
+    )
 
     # Adiciona as colunas de somas anuais pivotadas
     tabela_somas, tabela_somas_pivot = gerar_somas_anuais(produtos)
-    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(tabela_somas_pivot, on="descricao_normalizada", how="left")
+    tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(
+        tabela_somas_pivot, on="descricao_normalizada", how="left"
+    )
     # Preenche com 0 as colunas de valor que vieram do merge (Valores_ ou Estoque_)
-    vlr_cols = [c for c in tabela_descricoes_unificadas.columns if c.startswith(("Valores_", "Estoque_"))]
-    tabela_descricoes_unificadas[vlr_cols] = tabela_descricoes_unificadas[vlr_cols].fillna(0)
+    vlr_cols = [
+        c
+        for c in tabela_descricoes_unificadas.columns
+        if c.startswith(("Valores_", "Estoque_"))
+    ]
+    tabela_descricoes_unificadas[vlr_cols] = tabela_descricoes_unificadas[
+        vlr_cols
+    ].fillna(0)
 
-    tabela_descricoes_unificadas = alinhar_nomenclatura_documento(tabela_descricoes_unificadas)
+    tabela_descricoes_unificadas = alinhar_nomenclatura_documento(
+        tabela_descricoes_unificadas
+    )
 
-    codigos_ambiguos = set(codigo_stats.loc[codigo_stats["qtd_descricoes_diferentes"] > 1, "codigo"].astype(str))
+    codigos_ambiguos = set(
+        codigo_stats.loc[
+            codigo_stats["qtd_descricoes_diferentes"] > 1, "codigo"
+        ].astype(str)
+    )
     mapa_desag = produtos[["codigo", "descricao_normalizada"]].drop_duplicates().copy()
-    mapa_desag = mapa_desag[mapa_desag["codigo"].astype(str).isin(codigos_ambiguos)].copy()
+    mapa_desag = mapa_desag[
+        mapa_desag["codigo"].astype(str).isin(codigos_ambiguos)
+    ].copy()
     if not mapa_desag.empty:
-        mapa_desag = mapa_desag.sort_values(["codigo", "descricao_normalizada"], kind="stable")
+        mapa_desag = mapa_desag.sort_values(
+            ["codigo", "descricao_normalizada"], kind="stable"
+        )
         mapa_desag["seq_desag"] = mapa_desag.groupby("codigo").cumcount() + 1
         mapa_desag["codigo_desagregado"] = mapa_desag.apply(
             lambda row: f"{row['codigo']}_separado_{int(row['seq_desag']):02d}", axis=1
         )
     else:
-        mapa_desag = pd.DataFrame(columns=["codigo", "descricao_normalizada", "seq_desag", "codigo_desagregado"])
+        mapa_desag = pd.DataFrame(
+            columns=[
+                "codigo",
+                "descricao_normalizada",
+                "seq_desag",
+                "codigo_desagregado",
+            ]
+        )
 
     if mapa_desag.empty:
         codigos_desagregados = empty_with_schema(CODIGOS_DESAG_SCHEMA)
@@ -442,7 +622,9 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             on=["codigo", "descricao_normalizada"],
             how="inner",
         )
-        desc_cod_desag = pick_mode_by_group(base_codigos_desag, "codigo_desagregado", "descricao", "descricao")
+        desc_cod_desag = pick_mode_by_group(
+            base_codigos_desag, "codigo_desagregado", "descricao", "descricao"
+        )
         codigos_desagregados = (
             base_codigos_desag.groupby("codigo_desagregado", dropna=False)
             .agg(
@@ -451,7 +633,10 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
                 lista_cest=("cest_limpo", unique_sorted),
                 lista_gtin=("gtin_limpo", unique_sorted),
                 lista_unid=("unid_padronizada", unique_sorted),
-                lista_descricoes_normalizadas=("descricao_normalizada", lambda x: sorted(set(x))),
+                lista_descricoes_normalizadas=(
+                    "descricao_normalizada",
+                    lambda x: sorted(set(x)),
+                ),
                 co_sefin_inferido=("co_sefin_inferido", unique_sorted),
                 qtd_codigos=("codigo_desagregado", "nunique"),
                 descricao_padrao=("descricao", "first"),
@@ -459,7 +644,9 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             )
             .reset_index()
         )
-        codigos_desagregados = codigos_desagregados.merge(desc_cod_desag, on="codigo_desagregado", how="left")
+        codigos_desagregados = codigos_desagregados.merge(
+            desc_cod_desag, on="codigo_desagregado", how="left"
+        )
         codigos_desagregados = codigos_desagregados[
             [
                 "codigo_desagregado",
@@ -476,17 +663,28 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         ].sort_values(["codigo_desagregado"], kind="stable")
 
     replacement_map = {
-        (str(row["codigo"]), str(row["descricao_normalizada"])): str(row["codigo_desagregado"])
+        (str(row["codigo"]), str(row["descricao_normalizada"])): str(
+            row["codigo_desagregado"]
+        )
         for _, row in mapa_desag.iterrows()
     }
 
     def montar_lista_codigos_desag(desc_norm: str) -> list[str]:
-        subset = produtos.loc[produtos["descricao_normalizada"] == desc_norm, ["codigo", "qtd_descricoes_diferentes"]].drop_duplicates()
+        subset = produtos.loc[
+            produtos["descricao_normalizada"] == desc_norm,
+            ["codigo", "qtd_descricoes_diferentes"],
+        ].drop_duplicates()
         saida = []
         for _, row in subset.sort_values(["codigo"], kind="stable").iterrows():
             codigo_original = str(row["codigo"])
-            codigo_final = replacement_map.get((codigo_original, str(desc_norm)), codigo_original)
-            qtd = 1 if codigo_final != codigo_original else int(row["qtd_descricoes_diferentes"])
+            codigo_final = replacement_map.get(
+                (codigo_original, str(desc_norm)), codigo_original
+            )
+            qtd = (
+                1
+                if codigo_final != codigo_original
+                else int(row["qtd_descricoes_diferentes"])
+            )
             saida.append(format_codigo_lista(codigo_final, qtd))
         return unique_sorted(saida)
 
@@ -496,16 +694,22 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             "NCM_padrao": "ncm_padrao",
             "CEST_padrao": "cest_padrao",
             "GTIN_padrao": "gtin_padrao",
-            "co_sefin_padrao": "co_sefin_inferido"
+            "co_sefin_padrao": "co_sefin_inferido",
         }
     ).copy()
     tabela_final["codigo_padrao"] = tabela_final.apply(
-        lambda row: replacement_map.get((str(row["codigo_padrao"]), str(row["descricao_normalizada"])), row["codigo_padrao"]),
+        lambda row: replacement_map.get(
+            (str(row["codigo_padrao"]), str(row["descricao_normalizada"])),
+            row["codigo_padrao"],
+        ),
         axis=1,
     )
-    tabela_final["lista_codigos"] = tabela_final["descricao_normalizada"].map(montar_lista_codigos_desag)
-    tabela_final = tabela_final.sort_values(["descricao_normalizada", "descricao"], kind="stable")
-
+    tabela_final["lista_codigos"] = tabela_final["descricao_normalizada"].map(
+        montar_lista_codigos_desag
+    )
+    tabela_final = tabela_final.sort_values(
+        ["descricao_normalizada", "descricao"], kind="stable"
+    )
 
     tabela_final = alinhar_nomenclatura_documento(tabela_final)
 
@@ -513,40 +717,54 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     mapeamento = produtos[["codigo", "descricao_normalizada"]].drop_duplicates().copy()
     mapeamento = mapeamento.rename(columns={"codigo": "codigo_original"})
     mapeamento = mapeamento.merge(codigo_padrao, on="descricao_normalizada", how="left")
-    
+
     if not mapa_desag.empty:
         mapeamento = mapeamento.merge(
             mapa_desag[["codigo", "descricao_normalizada", "codigo_desagregado"]],
             left_on=["codigo_original", "descricao_normalizada"],
             right_on=["codigo", "descricao_normalizada"],
-            how="left"
+            how="left",
         ).drop(columns=["codigo"])
     else:
-        mapeamento["codigo_desagregado"] = pd.Series([None] * len(mapeamento), dtype="string")
+        mapeamento["codigo_desagregado"] = pd.Series(
+            [None] * len(mapeamento), dtype="string"
+        )
 
-    def categorizar_mapeamento(row):
-        orig = str(row["codigo_original"])
-        padrao = str(row["codigo_padrao"])
-        desag = row["codigo_desagregado"]
-        
-        if pd.notna(desag):
-            return str(desag), "SEGREGADO", f"Código {orig} segregado em {desag}"
-        if orig != padrao:
-            return padrao, "AGRUPADO", f"Código {orig} agrupado sob {padrao}"
-        return padrao, "REPRESENTANTE", f"Código {orig} mantido como representante do grupo"
+    import numpy as np
 
-    mapeamento[["codigo_final", "situacao", "detalhe"]] = mapeamento.apply(
-        lambda row: pd.Series(categorizar_mapeamento(row)), axis=1
+    orig = mapeamento["codigo_original"].astype(str)
+    padrao = mapeamento["codigo_padrao"].astype(str)
+    desag = mapeamento["codigo_desagregado"]
+
+    is_segregado = desag.notna()
+    is_agrupado = (~is_segregado) & (orig != padrao)
+
+    codigo_final = np.where(is_segregado, desag.astype(str), padrao)
+    situacao = np.where(
+        is_segregado, "SEGREGADO", np.where(is_agrupado, "AGRUPADO", "REPRESENTANTE")
     )
-    
+    detalhe = np.where(
+        is_segregado,
+        "Código " + orig + " segregado em " + desag.astype(str),
+        np.where(
+            is_agrupado,
+            "Código " + orig + " agrupado sob " + padrao,
+            "Código " + orig + " mantido como representante do grupo",
+        ),
+    )
+
+    mapeamento["codigo_final"] = codigo_final
+    mapeamento["situacao"] = situacao
+    mapeamento["detalhe"] = detalhe
+
     # Adiciona a descrição do código final para facilitar a leitura resumida
     mapeamento = mapeamento.merge(
         descricao_representativa, on="descricao_normalizada", how="left"
     ).rename(columns={"descricao": "descricao_final"})
 
-    mapeamento_resumido = mapeamento[[
-        "codigo_original", "codigo_final", "descricao_final", "situacao", "detalhe"
-    ]].sort_values(["situacao", "codigo_original"], kind="stable")
+    mapeamento[
+        ["codigo_original", "codigo_final", "descricao_final", "situacao", "detalhe"]
+    ].sort_values(["situacao", "codigo_original"], kind="stable")
 
     # Exportação final
     path_unif = produtos_dir / f"tabela_descricoes_unificadas_{cnpj}.parquet"
@@ -559,7 +777,9 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     tabela_descricoes_unificadas.to_parquet(path_unif, index=False)
     codigos_desagregados.to_parquet(path_desag, index=False)
     tabela_final.to_parquet(path_final, index=False)
-    mapeamento.to_parquet(produtos_dir / f"mapeamento_codigos_{cnpj}.parquet", index=False)
+    mapeamento.to_parquet(
+        produtos_dir / f"mapeamento_codigos_{cnpj}.parquet", index=False
+    )
     indice_df.to_parquet(path_indice, index=False)
 
     # Gravar somas anuais (já geradas acima)
@@ -567,9 +787,19 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
 
     # Tabela detalhada de itens com todas as características solicitadas
     column_order_itens = [
-        "fonte", "chave_produto", "codigo", "descricao", "descr_compl", "tipo_item", 
-        "ncm", "cest", "gtin", "unid", "data_mov", 
-        "descricao_normalizada", "co_sefin_inferido"
+        "fonte",
+        "chave_produto",
+        "codigo",
+        "descricao",
+        "descr_compl",
+        "tipo_item",
+        "ncm",
+        "cest",
+        "gtin",
+        "unid",
+        "data_mov",
+        "descricao_normalizada",
+        "co_sefin_inferido",
     ]
     cols_to_save = [c for c in column_order_itens if c in produtos.columns]
     produtos[cols_to_save].to_parquet(path_itens, index=False)

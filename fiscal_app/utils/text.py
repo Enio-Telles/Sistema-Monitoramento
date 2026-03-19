@@ -5,8 +5,26 @@ import unicodedata
 from typing import Any
 
 STOPWORDS = {
-    "A", "AS", "O", "OS", "DE", "DA", "DO", "DAS", "DOS", "COM", "PARA", "POR",
-    "E", "EM", "NA", "NO", "NAS", "NOS", "UM", "UMA",
+    "A",
+    "AS",
+    "O",
+    "OS",
+    "DE",
+    "DA",
+    "DO",
+    "DAS",
+    "DOS",
+    "COM",
+    "PARA",
+    "POR",
+    "E",
+    "EM",
+    "NA",
+    "NO",
+    "NAS",
+    "NOS",
+    "UM",
+    "UMA",
 }
 
 
@@ -29,13 +47,16 @@ def normalize_text(text: str | None) -> str:
 
 def natural_sort_key(value: str | None) -> list[Any]:
     text = "" if value is None else str(value)
-    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", text)]
+    return [
+        int(part) if part.isdigit() else part.lower()
+        for part in re.split(r"(\d+)", text)
+    ]
 
 
 def display_cell(value: Any) -> str:
     if value is None:
         return ""
-    
+
     # Handle Polars Series or other objects with to_list()
     if hasattr(value, "to_list") and callable(getattr(value, "to_list")):
         try:
@@ -46,8 +67,8 @@ def display_cell(value: Any) -> str:
     if isinstance(value, (list, tuple)):
         # Join elements, recursively calling display_cell for each
         return ", ".join(display_cell(v) for v in value if v is not None)
-    
+
     if isinstance(value, bool):
         return "true" if value else "false"
-    
+
     return str(value)

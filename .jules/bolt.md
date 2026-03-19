@@ -1,0 +1,3 @@
+## 2024-03-19 - Vectorized String Manipulations in Pandas
+**Learning:** In `tabelas_auditorias/processing.py`, operations manipulating strings row-by-row with `apply(lambda row: ..., axis=1)` are massive bottlenecks. Using `np.where` and `np.select` mapped to vectorized `.astype(str)` and string concatenations reduced processing time for a complex string categorization logic from ~48.5s to ~0.24s (200x speedup) for 100k rows.
+**Action:** Always prioritize vectorization (via `numpy.where`, `numpy.select`, or pandas built-in `.str` accessors) over `.apply(axis=1)` for conditional string formatting and DataFrame concatenation.
