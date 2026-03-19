@@ -692,13 +692,10 @@ class MainWindow(QMainWindow):
         rows_bottom = self.results_table_model.get_checked_rows()
         
         # Merge and de-duplicate
-        combined = []
-        seen = set()
+        combined_dict = {}
         for r in (rows_top + rows_bottom):
-            key = (str(r.get("descrição_normalizada") or ""), str(r.get("descricao") or ""))
-            if key not in seen:
-                seen.add(key)
-                combined.append(r)
+            combined_dict.setdefault((str(r.get("descrição_normalizada") or ""), str(r.get("descricao") or "")), r)
+        combined = list(combined_dict.values())
 
         if len(combined) < 2:
             self.mostrar_erro("Seleção insuficiente", "Marque pelo menos duas linhas com 'Visto' (pode ser em ambas as tabelas) para agregar.")
