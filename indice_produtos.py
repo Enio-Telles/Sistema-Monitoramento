@@ -51,7 +51,7 @@ posteriormente, correlacionar com o ``codigo_padrao``.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Optional
+from typing import Iterable, List, Optional
 
 import pandas as pd
 
@@ -106,7 +106,16 @@ def criar_indice_produtos(produtos: pd.DataFrame) -> pd.DataFrame:
         - ``lista_unidades`` (list[str]): lista de unidades distintas
           encontradas para esta combinação de campos.
     """
-    required_cols = {"codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid"}
+    required_cols = {
+        "codigo",
+        "descricao",
+        "descr_compl",
+        "tipo_item",
+        "ncm",
+        "cest",
+        "gtin",
+        "unid",
+    }
     missing = required_cols - set(produtos.columns)
     if missing:
         raise ValueError(
@@ -116,13 +125,25 @@ def criar_indice_produtos(produtos: pd.DataFrame) -> pd.DataFrame:
     # Certifique‑se de que as colunas chave são do tipo string para evitar que valores
     # numéricos causem distinções indesejadas durante o agrupamento.
     produtos_normalizado = produtos.copy()
-    for col in ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin", "unid"]:
-        produtos_normalizado[col] = produtos_normalizado[col].astype("string").str.strip()
+    for col in [
+        "codigo",
+        "descricao",
+        "descr_compl",
+        "tipo_item",
+        "ncm",
+        "cest",
+        "gtin",
+        "unid",
+    ]:
+        produtos_normalizado[col] = (
+            produtos_normalizado[col].astype("string").str.strip()
+        )
 
     # Agrupa por todas as colunas chave exceto "unid" e consolida a lista de unidades
     agrupado = (
         produtos_normalizado.groupby(
-            ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin"], dropna=False
+            ["codigo", "descricao", "descr_compl", "tipo_item", "ncm", "cest", "gtin"],
+            dropna=False,
         )
         .agg(lista_unidades=("unid", _normalize_unit_list))
         .reset_index()

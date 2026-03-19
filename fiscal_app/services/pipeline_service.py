@@ -19,7 +19,12 @@ class PipelineResult:
 
 
 class PipelineService:
-    def __init__(self, pipeline_script: Path = PIPELINE_SCRIPT, sql_dir: Path = SQL_DIR, output_root: Path = CONSULTAS_ROOT) -> None:
+    def __init__(
+        self,
+        pipeline_script: Path = PIPELINE_SCRIPT,
+        sql_dir: Path = SQL_DIR,
+        output_root: Path = CONSULTAS_ROOT,
+    ) -> None:
         self.pipeline_script = pipeline_script
         self.sql_dir = sql_dir
         self.output_root = output_root
@@ -49,7 +54,9 @@ class PipelineService:
         if data_limite:
             cmd.extend(["--data-limite", data_limite])
 
-        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
+        )
         return PipelineResult(
             ok=proc.returncode == 0,
             stdout=proc.stdout,

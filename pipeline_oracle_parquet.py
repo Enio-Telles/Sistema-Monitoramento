@@ -87,7 +87,9 @@ def conectar_oracle(usuario: str | None = None, senha: str | None = None):
     senha = (senha or os.getenv("DB_PASSWORD", "")).strip()
 
     if not usuario or not senha:
-        raise RuntimeError("Credenciais Oracle não encontradas. Preencha DB_USER e DB_PASSWORD no .env")
+        raise RuntimeError(
+            "Credenciais Oracle não encontradas. Preencha DB_USER e DB_PASSWORD no .env"
+        )
 
     dsn = oracledb.makedsn(host, porta, service_name=servico)
     try:
@@ -162,7 +164,9 @@ def fetch_query_to_parquet(
             table = pa.Table.from_pandas(chunk, preserve_index=False)
 
             if writer is None:
-                writer = pq.ParquetWriter(output_path, table.schema, compression="snappy")
+                writer = pq.ParquetWriter(
+                    output_path, table.schema, compression="snappy"
+                )
             writer.write_table(table)
             rows_written += len(chunk)
 
@@ -170,7 +174,11 @@ def fetch_query_to_parquet(
         writer.close()
     else:
         empty_df = pd.DataFrame(columns=columns)
-        pq.write_table(pa.Table.from_pandas(empty_df, preserve_index=False), output_path, compression="snappy")
+        pq.write_table(
+            pa.Table.from_pandas(empty_df, preserve_index=False),
+            output_path,
+            compression="snappy",
+        )
 
     return rows_written
 
@@ -210,9 +218,18 @@ def extrair_consultas(
                 },
             )
             log(f"Executando {sql_file.name} -> {output_path.name}")
-            linhas = fetch_query_to_parquet(conn, sql, binds, output_path, fetch_size=fetch_size, source_name=sql_file.stem.upper())
+            linhas = fetch_query_to_parquet(
+                conn,
+                sql,
+                binds,
+                output_path,
+                fetch_size=fetch_size,
+                source_name=sql_file.stem.upper(),
+            )
             log(f"Concluído {sql_file.name}: {linhas:,} linhas")
-            results.append(ExtractionResult(sql_file.stem.lower(), sql_file, output_path, linhas))
+            results.append(
+                ExtractionResult(sql_file.stem.lower(), sql_file, output_path, linhas)
+            )
     finally:
         conn.close()
     return results
@@ -225,8 +242,16 @@ def parse_args() -> argparse.Namespace:
             "e gera apenas as tabelas finais do fluxo de consolidação dentro da pasta produtos."
         )
     )
-    parser.add_argument("--cnpj", required=True, help="Único dado de entrada de negócio usado nas consultas.")
-    parser.add_argument("--data-limite", default=None, help="Data limite de processamento EFD no formato DD/MM/YYYY. O padrão é a data atual.")
+    parser.add_argument(
+        "--cnpj",
+        required=True,
+        help="Único dado de entrada de negócio usado nas consultas.",
+    )
+    parser.add_argument(
+        "--data-limite",
+        default=None,
+        help="Data limite de processamento EFD no formato DD/MM/YYYY. O padrão é a data atual.",
+    )
     parser.add_argument(
         "--sql-dir",
         type=Path,
@@ -239,10 +264,24 @@ def parse_args() -> argparse.Namespace:
         default=Path("saida_produtos"),
         help="Diretório raiz onde será criada a pasta do CNPJ. Padrão: ./saida_produtos",
     )
-    parser.add_argument("--fetch-size", type=int, default=50_000, help="Quantidade de linhas por lote.")
-    parser.add_argument("--db-user", default=None, help="Usuário Oracle. Se omitido, usa DB_USER do .env")
-    parser.add_argument("--db-password", default=None, help="Senha Oracle. Se omitido, usa DB_PASSWORD do .env")
-    parser.add_argument("--extrair-apenas", action="store_true", help="Executa apenas a extração Oracle -> Parquet")
+    parser.add_argument(
+        "--fetch-size", type=int, default=50_000, help="Quantidade de linhas por lote."
+    )
+    parser.add_argument(
+        "--db-user",
+        default=None,
+        help="Usuário Oracle. Se omitido, usa DB_USER do .env",
+    )
+    parser.add_argument(
+        "--db-password",
+        default=None,
+        help="Senha Oracle. Se omitido, usa DB_PASSWORD do .env",
+    )
+    parser.add_argument(
+        "--extrair-apenas",
+        action="store_true",
+        help="Executa apenas a extração Oracle -> Parquet",
+    )
     parser.add_argument(
         "--consolidar-apenas",
         action="store_true",
@@ -282,6 +321,7 @@ def main() -> int:
     except Exception as exc:
         print(f"ERRO INESPERADO: {exc}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         return 1
 

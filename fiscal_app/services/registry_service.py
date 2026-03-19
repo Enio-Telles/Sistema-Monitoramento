@@ -26,7 +26,9 @@ class RegistryService:
         return json.loads(self.registry_file.read_text(encoding="utf-8"))
 
     def _save_raw(self, data: list[dict]) -> None:
-        self.registry_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.registry_file.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def list_records(self) -> list[CNPJRecord]:
         rows = self._load_raw()
@@ -38,7 +40,11 @@ class RegistryService:
         now = datetime.now().isoformat(timespec="seconds")
         existing = next((item for item in rows if item["cnpj"] == cnpj), None)
         if existing is None:
-            existing = {"cnpj": cnpj, "added_at": now, "last_run_at": now if ran_now else None}
+            existing = {
+                "cnpj": cnpj,
+                "added_at": now,
+                "last_run_at": now if ran_now else None,
+            }
             rows.append(existing)
         elif ran_now:
             existing["last_run_at"] = now

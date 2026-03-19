@@ -41,7 +41,9 @@ class ParquetService:
         base = self.cnpj_dir(cnpj)
         if not base.exists():
             return []
-        files = list(base.glob("*.parquet")) + list((base / "produtos").glob("*.parquet"))
+        files = list(base.glob("*.parquet")) + list(
+            (base / "produtos").glob("*.parquet")
+        )
         return sorted(files, key=lambda p: (str(p.parent), p.name))
 
     def get_schema(self, parquet_path: Path) -> list[str]:
@@ -53,17 +55,34 @@ class ParquetService:
         op = cond.operator
 
         if op == "contém":
-            return col.cast(pl.Utf8, strict=False).fill_null("").str.to_lowercase().str.contains(value.lower(), literal=True)
+            return (
+                col.cast(pl.Utf8, strict=False)
+                .fill_null("")
+                .str.to_lowercase()
+                .str.contains(value.lower(), literal=True)
+            )
         if op == "igual":
             return col.cast(pl.Utf8, strict=False).fill_null("") == value
         if op == "começa com":
-            return col.cast(pl.Utf8, strict=False).fill_null("").str.to_lowercase().str.starts_with(value.lower())
+            return (
+                col.cast(pl.Utf8, strict=False)
+                .fill_null("")
+                .str.to_lowercase()
+                .str.starts_with(value.lower())
+            )
         if op == "termina com":
-            return col.cast(pl.Utf8, strict=False).fill_null("").str.to_lowercase().str.ends_with(value.lower())
+            return (
+                col.cast(pl.Utf8, strict=False)
+                .fill_null("")
+                .str.to_lowercase()
+                .str.ends_with(value.lower())
+            )
         if op == "é nulo":
             return col.is_null() | (col.cast(pl.Utf8, strict=False).fill_null("") == "")
         if op == "não é nulo":
-            return ~(col.is_null() | (col.cast(pl.Utf8, strict=False).fill_null("") == ""))
+            return ~(
+                col.is_null() | (col.cast(pl.Utf8, strict=False).fill_null("") == "")
+            )
 
         numeric_col = col.cast(pl.Float64, strict=False)
         try:
@@ -82,7 +101,9 @@ class ParquetService:
 
         return col.cast(pl.Utf8, strict=False).fill_null("") == value
 
-    def apply_filters(self, lf: pl.LazyFrame, conditions: Iterable[FilterCondition]) -> pl.LazyFrame:
+    def apply_filters(
+        self, lf: pl.LazyFrame, conditions: Iterable[FilterCondition]
+    ) -> pl.LazyFrame:
         filtered = lf
         for cond in conditions:
             if not cond.column:
@@ -92,7 +113,9 @@ class ParquetService:
             filtered = filtered.filter(self._build_expr(cond))
         return filtered
 
-    def build_lazyframe(self, parquet_path: Path, conditions: Iterable[FilterCondition] | None = None) -> pl.LazyFrame:
+    def build_lazyframe(
+        self, parquet_path: Path, conditions: Iterable[FilterCondition] | None = None
+    ) -> pl.LazyFrame:
         lf = pl.scan_parquet(parquet_path)
         if conditions:
             lf = self.apply_filters(lf, conditions)
@@ -123,7 +146,12 @@ class ParquetService:
             visible_columns=visible_columns,
         )
 
-    def load_dataset(self, parquet_path: Path, conditions: list[FilterCondition] | None = None, columns: list[str] | None = None) -> pl.DataFrame:
+    def load_dataset(
+        self,
+        parquet_path: Path,
+        conditions: list[FilterCondition] | None = None,
+        columns: list[str] | None = None,
+    ) -> pl.DataFrame:
         lf = self.build_lazyframe(parquet_path, conditions or [])
         if columns:
             lf = lf.select(columns)

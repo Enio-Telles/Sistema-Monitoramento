@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 from .constants import STOPWORDS, UNIT_SYNONYMS
 
+
 def _remover_acentos(texto: str | None) -> str | None:
     if texto is None:
         return None
@@ -110,7 +111,9 @@ def column_map_ci(df: pd.DataFrame) -> dict[str, str]:
     return {str(col).lower(): col for col in df.columns}
 
 
-def coalesce_columns_ci(df: pd.DataFrame, candidates: Iterable[str], default: Any = None) -> pd.Series:
+def coalesce_columns_ci(
+    df: pd.DataFrame, candidates: Iterable[str], default: Any = None
+) -> pd.Series:
     cmap = column_map_ci(df)
     for col in candidates:
         real = cmap.get(col.lower())
@@ -149,19 +152,29 @@ class COSEFINClassifier:
 
         # Normalização preventiva das bases de referência
         if self.df_cest_ncm is not None:
-            self.df_cest_ncm["it_nu_cest"] = self.df_cest_ncm["it_nu_cest"].astype("string").str.strip()
-            self.df_cest_ncm["it_nu_ncm"] = self.df_cest_ncm["it_nu_ncm"].astype("string").str.strip()
-            self.df_cest_ncm["it_co_sefin"] = self.df_cest_ncm["it_co_sefin"].astype("string").str.strip()
+            self.df_cest_ncm["it_nu_cest"] = (
+                self.df_cest_ncm["it_nu_cest"].astype("string").str.strip()
+            )
+            self.df_cest_ncm["it_nu_ncm"] = (
+                self.df_cest_ncm["it_nu_ncm"].astype("string").str.strip()
+            )
+            self.df_cest_ncm["it_co_sefin"] = (
+                self.df_cest_ncm["it_co_sefin"].astype("string").str.strip()
+            )
             # F1: it_nu_cest, it_nu_ncm -> it_co_sefin
 
         if self.df_cest is not None:
             self.df_cest["cest"] = self.df_cest["cest"].astype("string").str.strip()
-            self.df_cest["co-sefin"] = self.df_cest["co-sefin"].astype("string").str.strip()
+            self.df_cest["co-sefin"] = (
+                self.df_cest["co-sefin"].astype("string").str.strip()
+            )
             # F2: cest -> co-sefin
 
         if self.df_ncm is not None:
             self.df_ncm["ncm"] = self.df_ncm["ncm"].astype("string").str.strip()
-            self.df_ncm["co-sefin"] = self.df_ncm["co-sefin"].astype("string").str.strip()
+            self.df_ncm["co-sefin"] = (
+                self.df_ncm["co-sefin"].astype("string").str.strip()
+            )
             # F3: ncm -> co-sefin
 
     def classify(self, df: pd.DataFrame) -> pd.Series:
@@ -169,10 +182,13 @@ class COSEFINClassifier:
         res = pd.Series([None] * len(df), index=df.index, dtype="string")
 
         # Normalização das colunas de entrada para o merge
-        work = pd.DataFrame({
-            "ncm": df["ncm_limpo"].astype("string").str.strip(),
-            "cest": df["cest_limpo"].astype("string").str.strip()
-        }, index=df.index)
+        work = pd.DataFrame(
+            {
+                "ncm": df["ncm_limpo"].astype("string").str.strip(),
+                "cest": df["cest_limpo"].astype("string").str.strip(),
+            },
+            index=df.index,
+        )
 
         # Tier 1: CEST + NCM
         if self.df_cest_ncm is not None:
@@ -180,26 +196,18 @@ class COSEFINClassifier:
                 self.df_cest_ncm[["it_nu_cest", "it_nu_ncm", "it_co_sefin"]],
                 left_on=["cest", "ncm"],
                 right_on=["it_nu_cest", "it_nu_ncm"],
-                how="left"
+                how="left",
             )
             res = res.fillna(m1["it_co_sefin"].set_axis(df.index))
 
         # Tier 2: CEST
         if self.df_cest is not None:
-            m2 = work.merge(
-                self.df_cest[["cest", "co-sefin"]],
-                on="cest",
-                how="left"
-            )
+            m2 = work.merge(self.df_cest[["cest", "co-sefin"]], on="cest", how="left")
             res = res.fillna(m2["co-sefin"].set_axis(df.index))
 
         # Tier 3: NCM
         if self.df_ncm is not None:
-            m3 = work.merge(
-                self.df_ncm[["ncm", "co-sefin"]],
-                on="ncm",
-                how="left"
-            )
+            m3 = work.merge(self.df_ncm[["ncm", "co-sefin"]], on="ncm", how="left")
             res = res.fillna(m3["co-sefin"].set_axis(df.index))
 
         return res

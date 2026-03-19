@@ -3,11 +3,9 @@ from __future__ import annotations
 import html
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import polars as pl
 from docx import Document
-from docx.shared import Inches
 from openpyxl import Workbook
 
 from fiscal_app.config import MAX_DOCX_ROWS
@@ -20,7 +18,9 @@ class ExportService:
         for row in df.iter_rows(named=True):
             yield [display_cell(row.get(col)) for col in df.columns]
 
-    def export_excel(self, target: Path, df: pl.DataFrame, sheet_name: str = "Dados") -> Path:
+    def export_excel(
+        self, target: Path, df: pl.DataFrame, sheet_name: str = "Dados"
+    ) -> Path:
         target.parent.mkdir(parents=True, exist_ok=True)
         wb = Workbook()
         ws = wb.active
@@ -30,7 +30,9 @@ class ExportService:
             ws.append(row)
         ws.freeze_panes = "A2"
         for col in ws.columns:
-            ws.column_dimensions[col[0].column_letter].width = min(max(len(str(col[0].value or "")) + 2, 12), 40)
+            ws.column_dimensions[col[0].column_letter].width = min(
+                max(len(str(col[0].value or "")) + 2, 12), 40
+            )
         wb.save(target)
         return target
 
@@ -70,8 +72,8 @@ th {{ background: #eef2f7; position: sticky; top: 0; }}
 <p><strong>CNPJ:</strong> {html.escape(cnpj)}</p>
 <p><strong>Tabela:</strong> {html.escape(table_name)}</p>
 <p><strong>Gerado em:</strong> {generated_at}</p>
-<p><strong>Filtros:</strong> {html.escape(filters_text or 'Sem filtros')}</p>
-<p><strong>Colunas visíveis:</strong> {html.escape(', '.join(visible_columns) if visible_columns else 'Todas')}</p>
+<p><strong>Filtros:</strong> {html.escape(filters_text or "Sem filtros")}</p>
+<p><strong>Colunas visíveis:</strong> {html.escape(", ".join(visible_columns) if visible_columns else "Todas")}</p>
 <p><strong>Linhas no relatório:</strong> {df.height}</p>
 </div>
 <h2>Dados</h2>
@@ -105,7 +107,9 @@ th {{ background: #eef2f7; position: sticky; top: 0; }}
         doc.add_paragraph(f"CNPJ: {cnpj}")
         doc.add_paragraph(f"Tabela: {table_name}")
         doc.add_paragraph(f"Filtros: {filters_text or 'Sem filtros'}")
-        doc.add_paragraph(f"Colunas visíveis: {', '.join(visible_columns) if visible_columns else 'Todas'}")
+        doc.add_paragraph(
+            f"Colunas visíveis: {', '.join(visible_columns) if visible_columns else 'Todas'}"
+        )
         doc.add_paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
         doc.add_paragraph(f"Linhas incluídas: {df.height}")
 

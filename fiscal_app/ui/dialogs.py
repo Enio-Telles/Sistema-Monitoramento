@@ -11,7 +11,9 @@ from PySide6.QtCore import Qt
 
 
 class DialogoSelecaoColunas(QDialog):
-    def __init__(self, columns: list[str], visible_columns: list[str], parent=None) -> None:
+    def __init__(
+        self, columns: list[str], visible_columns: list[str], parent=None
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Selecionar colunas visíveis")
         self.resize(420, 520)
