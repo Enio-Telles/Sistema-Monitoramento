@@ -1,0 +1,3 @@
+## 2025-03-19 - Added Keyboard Navigation and Input Submission via Enter in PySide6
+**Learning:** In desktop applications using PySide6, input fields like `QLineEdit` often require explicit binding of the `returnPressed` signal to a button's `click` slot to allow form submission via the 'Enter' key. This is a common accessibility/UX gap compared to web forms, where 'Enter' submission is often native.
+**Action:** When auditing PySide6 forms, check if key input fields have `returnPressed` bound to their primary action button. Ensure pagination and navigation controls have explicit `QKeySequence` shortcuts (like `Alt+Left`/`Alt+Right`) and descriptive tooltips explaining the shortcuts.
