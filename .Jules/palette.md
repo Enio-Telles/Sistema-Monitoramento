@@ -1,0 +1,3 @@
+## 2024-05-28 - PySide6 Form Input Accessibility and Quick Clear
+**Learning:** Adding `.setClearButtonEnabled(True)` and connecting `.returnPressed` signals to form action buttons in PySide6 significantly improves keyboard accessibility and interaction speed. It allows users to quickly clear inputs without repeatedly pressing backspace and to submit forms via the 'Enter' key instead of requiring mouse clicks.
+**Action:** When building PySide6 interfaces with `QLineEdit` inputs used for filtering, searching, or main actions, always enable the clear button and map the return key to the primary action.

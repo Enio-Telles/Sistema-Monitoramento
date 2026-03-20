@@ -2,23 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import polars as pl
 from PySide6.QtCore import QDate, QThread, Qt, Signal, QUrl
-from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QApplication,
     QDateEdit,
     QFileDialog,
-    QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
-    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -28,7 +24,6 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QTableView,
-    QTextEdit,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -43,7 +38,7 @@ from fiscal_app.services.parquet_service import FilterCondition, ParquetService
 from fiscal_app.services.pipeline_service import PipelineResult, PipelineService
 from fiscal_app.services.registry_service import RegistryService
 from fiscal_app.ui.dialogs import DialogoSelecaoColunas
-from fiscal_app.utils.text import display_cell, normalize_text, remove_accents
+from fiscal_app.utils.text import remove_accents
 
 
 class PipelineWorker(QThread):
@@ -132,6 +127,7 @@ class MainWindow(QMainWindow):
         cnpj_layout = QVBoxLayout(cnpj_box)
         input_line = QHBoxLayout()
         self.cnpj_input = QLineEdit()
+        self.cnpj_input.setClearButtonEnabled(True)
         self.cnpj_input.setPlaceholderText("Digite o CNPJ com ou sem máscara")
         self.btn_run_pipeline = QPushButton("Analisar CNPJ")
         input_line.addWidget(self.cnpj_input)
@@ -202,6 +198,7 @@ class MainWindow(QMainWindow):
         self.filter_operator = QComboBox()
         self.filter_operator.addItems(["contém", "igual", "começa com", "termina com", ">", ">=", "<", "<=", "é nulo", "não é nulo"])
         self.filter_value = QLineEdit()
+        self.filter_value.setClearButtonEnabled(True)
         self.filter_value.setPlaceholderText("Valor do filtro")
         self.btn_add_filter = QPushButton("Adicionar filtro")
         self.btn_clear_filters = QPushButton("Limpar filtros")
@@ -253,12 +250,16 @@ class MainWindow(QMainWindow):
 
         quick_filter_layout = QHBoxLayout()
         self.qf_norm = QLineEdit()
+        self.qf_norm.setClearButtonEnabled(True)
         self.qf_norm.setPlaceholderText("Filtrar Desc. Norm")
         self.qf_desc = QLineEdit()
+        self.qf_desc.setClearButtonEnabled(True)
         self.qf_desc.setPlaceholderText("Filtrar Descrição")
         self.qf_ncm = QLineEdit()
+        self.qf_ncm.setClearButtonEnabled(True)
         self.qf_ncm.setPlaceholderText("Filtrar NCM")
         self.qf_cest = QLineEdit()
+        self.qf_cest.setClearButtonEnabled(True)
         self.qf_cest.setPlaceholderText("Filtrar CEST")
         
         for w in [self.qf_norm, self.qf_desc, self.qf_ncm, self.qf_cest]:
@@ -300,12 +301,16 @@ class MainWindow(QMainWindow):
 
         agg_qf_layout = QHBoxLayout()
         self.aqf_norm = QLineEdit()
+        self.aqf_norm.setClearButtonEnabled(True)
         self.aqf_norm.setPlaceholderText("Filtrar Desc. Norm")
         self.aqf_desc = QLineEdit()
+        self.aqf_desc.setClearButtonEnabled(True)
         self.aqf_desc.setPlaceholderText("Filtrar Descrição")
         self.aqf_ncm = QLineEdit()
+        self.aqf_ncm.setClearButtonEnabled(True)
         self.aqf_ncm.setPlaceholderText("Filtrar NCM")
         self.aqf_cest = QLineEdit()
+        self.aqf_cest.setClearButtonEnabled(True)
         self.aqf_cest.setPlaceholderText("Filtrar CEST")
 
         for w in [self.aqf_norm, self.aqf_desc, self.aqf_ncm, self.aqf_cest]:
@@ -356,12 +361,14 @@ class MainWindow(QMainWindow):
     def _conectar_sinais(self) -> None:
         self.btn_refresh_cnpjs.clicked.connect(self.atualizar_cnpjs)
         self.btn_run_pipeline.clicked.connect(self.executar_pipeline_por_input)
+        self.cnpj_input.returnPressed.connect(self.executar_pipeline_por_input)
         self.cnpj_list.itemSelectionChanged.connect(self.ao_selecionar_cnpj)
         self.file_tree.itemClicked.connect(self.ao_ativar_arquivo)
         self.file_tree.itemDoubleClicked.connect(self.ao_ativar_arquivo)
         self.btn_open_cnpj_folder.clicked.connect(self.abrir_pasta_cnpj)
 
         self.btn_add_filter.clicked.connect(self.adicionar_filtro_do_formulario)
+        self.filter_value.returnPressed.connect(self.adicionar_filtro_do_formulario)
         self.btn_clear_filters.clicked.connect(self.limpar_filtros)
         self.btn_remove_filter.clicked.connect(self.remover_filtro_selecionado)
         self.btn_choose_columns.clicked.connect(self.escolher_colunas)
