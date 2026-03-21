@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import numpy as np
 from .constants import FINAL_SCHEMA, CODIGOS_DESAG_SCHEMA
 from .utils import (
     coalesce_columns_ci,
@@ -234,16 +235,21 @@ def gerar_somas_anuais(produtos: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFra
     )
     
     # Pivotagem para colunas individuais com nomes solicitados
-    def get_col_name(row):
-        tp = str(row["tipo_operacao"]).upper()
-        ano = str(row["ano"])
-        if "ENTRADA" in tp: return f"Valores_Entradas_{ano}"
-        if "SAIDA" in tp: return f"Valores_Saidas_{ano}"
-        if "INVENTARIO" in tp: return f"Estoque_final_{ano}"
-        return f"Outros_{ano}"
-
     df_pivot = somas.copy()
-    df_pivot["col_name"] = df_pivot.apply(get_col_name, axis=1)
+    tp = df_pivot["tipo_operacao"].astype(str).str.upper()
+    ano = df_pivot["ano"].astype(str)
+
+    conds = [
+        tp.str.contains("ENTRADA"),
+        tp.str.contains("SAIDA"),
+        tp.str.contains("INVENTARIO")
+    ]
+    choices = [
+        "Valores_Entradas_" + ano,
+        "Valores_Saidas_" + ano,
+        "Estoque_final_" + ano
+    ]
+    df_pivot["col_name"] = np.select(conds, choices, default="Outros_" + ano)
     
     # Pivotamos os valores totais
     pivoted = df_pivot.pivot(index="descricao_normalizada", columns="col_name", values="valor_total").fillna(0)
@@ -315,9 +321,9 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     )
 
     produtos = produtos.merge(codigo_stats, on="codigo", how="left")
-    produtos["codigo_lista_fmt"] = produtos.apply(
-        lambda row: format_codigo_lista(str(row["codigo"]), int(row["qtd_descricoes_diferentes"])),
-        axis=1,
+    produtos["codigo_lista_fmt"] = (
+        "[" + produtos["codigo"].astype(str) + "; " +
+        produtos["qtd_descricoes_diferentes"].fillna(0).astype(int).astype(str) + "]"
     )
 
     candidatos = (
@@ -364,7 +370,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
             lista_gtin=("gtin_limpo", unique_sorted),
             lista_unid=("unid_padronizada", unique_sorted),
             lista_fontes=("fonte", unique_sorted),
-            lista_descricoes=("lista_descricoes", lambda x: sorted(set(y for l in x for y in l))),
+            lista_descricoes=("lista_descricoes", lambda x: sorted(set(y for lst in x for y in lst))),
             lista_descricoes_normalizadas=("descricao_normalizada", lambda x: sorted(set(x))),
             lista_co_sefin=("co_sefin_inferido", unique_sorted),
             qtd_codigos=("codigo_lista_fmt", "nunique"),
@@ -375,7 +381,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
     )
 
     # Identificação de conflitos de CO_SEFIN
-    tabela_descricoes_unificadas["conflito_co_sefin"] = tabela_descricoes_unificadas["lista_co_sefin"].apply(lambda l: len(l) > 1)
+    tabela_descricoes_unificadas["conflito_co_sefin"] = tabela_descricoes_unificadas["lista_co_sefin"].apply(lambda lst: len(lst) > 1)
     # Define o co_sefin_padrao como o mais frequente no grupo ou o primeiro da lista
     co_sefin_padrao = pick_mode_by_group(produtos, "descricao_normalizada", "co_sefin_inferido", "co_sefin_padrao")
     tabela_descricoes_unificadas = tabela_descricoes_unificadas.merge(co_sefin_padrao, on="descricao_normalizada", how="left")
@@ -544,7 +550,7 @@ def materializar_tabelas_consolidacao(pasta_cnpj: Path, cnpj: str) -> dict[str, 
         descricao_representativa, on="descricao_normalizada", how="left"
     ).rename(columns={"descricao": "descricao_final"})
 
-    mapeamento_resumido = mapeamento[[
+    _mapeamento_resumido = mapeamento[[
         "codigo_original", "codigo_final", "descricao_final", "situacao", "detalhe"
     ]].sort_values(["situacao", "codigo_original"], kind="stable")
 

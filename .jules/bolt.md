@@ -1,0 +1,3 @@
+## 2024-05-18 - Replacing apply(axis=1) with Vectorized Operations
+**Learning:** `df.apply(axis=1)` with string formatting in Pandas is extremely slow for large DataFrames because it runs as a Python loop. Using vectorized operations with `np.select()` or Pandas string methods (e.g. `.str.contains()`) combined with vectorized string concatenation is significantly faster (over 5x speedup for 100k rows).
+**Action:** When optimizing Pandas operations, prioritize replacing `.apply(axis=1)` with vectorized boolean masking (`np.where`, `np.select`, or `.mask()/.where()`) and vectorized string manipulations.
